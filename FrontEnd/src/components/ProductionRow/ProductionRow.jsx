@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Utensils } from 'lucide-react';
 
 import LossDonut from './LossDonut';
+import { getLossDescription } from '@config/LossCatalog';
 
 
 const ProductionRow = ({ row, onOpenModal, isMealHour, customMeta, onSetMeal }) => {
@@ -67,10 +68,10 @@ const ProductionRow = ({ row, onOpenModal, isMealHour, customMeta, onSetMeal }) 
             <td style={{ fontSize: '0.85rem' }}>{row.modelos}</td>
 
             {/* COLUMNA 5: PÉRDIDAS NO JUSTIFICADAS*/}
-            <td style={{ fontSize: '0.85rem' }}>
+            <td style={{ fontSize: '0.85rem' }}> 
                 <LossDonut
                 justificada={row.perdidaJustificada ? row.perdidaJustificada : 0}
-                noJustificada={row.perdidaNoJustificada ?  row.perdidaNoJustificada : row.perdidaCalculada}
+                noJustificada={row.perdidaNoJustificada ?  row.perdidaNoJustificada : (row.perdidaNoJustificada === 0 ? 0 : row.perdidaCalculada)}
                 finalizada={row.finalizada}
                 />
             </td>
@@ -86,7 +87,28 @@ const ProductionRow = ({ row, onOpenModal, isMealHour, customMeta, onSetMeal }) 
 
             {/* COLUMNA 6: OBSERVACIONES */}
             <td style={{ textAlign: 'left', fontSize: '0.85rem', color: '#555' }}>
-                {renderObservations()}
+                {row.detalles && row.detalles.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {row.detalles.map(detalle => (
+                            <div 
+                                key={detalle.IdDetalle} 
+                                style={{ 
+                                    fontSize: '11px', 
+                                    padding: '4px 8px', 
+                                    backgroundColor: '#f5f5f5', 
+                                    borderLeft: '3px solid #ef5350',
+                                    borderRadius: '4px',
+                                    textAlign: 'left'
+                                }}
+                            >
+                            <strong>{detalle.minutos}m:</strong> {getLossDescription(detalle.motivo)} <br/>
+                            <span style={{ color: '#666' }}>{detalle.observacion}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <span style={{ color: '#ccc' }}>-</span>
+                )}
             </td>
 
             {/* COLUMNA 7: ACCIONES */}

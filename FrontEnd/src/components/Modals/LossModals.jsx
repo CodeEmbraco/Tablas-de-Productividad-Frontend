@@ -45,6 +45,10 @@ const LossModal = ({
             alert("Debe seleccionar un motivo");
             return;
         }
+        if (newLossMinutos > noJustificado){
+            alert("Los minutos justificados superan los minutos no justificados");
+            return;
+        }
 
         const newItem = {
             minutos: parseInt(newLossMinutos),

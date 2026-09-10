@@ -131,25 +131,6 @@ const TablaGeneric = ({ lineConfigKey }) => {
     const [supervisor, setSupervisor] = useState('0');
     const [lider, setLider] = useState('0');
 
-    // Efecto para sincronizar Supervisor y Líder globales cuando se cargan datos de la DB
-    useEffect(() => {
-        if (tableItems && tableItems.length > 0) {
-            
-            // 1. Buscamos la primera hora en la tabla que ya tenga un supervisor guardado
-            const filaConSup = tableItems.find(row => row.supervisor && String(row.supervisor) !== '0');
-            if (filaConSup && supervisor === '0') {
-                setSupervisor(String(filaConSup.SUPERVISOR));
-            }
-
-            // 2. Buscamos la primera hora que ya tenga un líder guardado
-            const filaConLider = tableItems.find(row => row.lider && String(row.lider) !== '0');
-            if (filaConLider && lider === '0') {
-                setLider(String(filaConLider.lider));
-            }
-        }
-    }, [tableItems]); // Se ejecuta cada vez que el backend nos manda la tabla actualizada
-
-
     // Manejadores de Eventos
     const handleSaveFromModal = (totalMins, detailsArray) => {
         
@@ -308,7 +289,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
                                             <option value="0" disabled>--Selecciona--</option>
                                             {dynamicConfig.leaders.map(l => (
                                                 <option key={typeof l === 'object' ? l.id : l} value={typeof l === 'object' ? l.id : l}>
-                                                    {typeof l === 'object' ? l.name : l} - {l.id}
+                                                    {typeof l === 'object' ? l.name : l}
                                                 </option>
                                             ))}
                                         </select>

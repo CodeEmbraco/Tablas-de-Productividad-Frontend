@@ -29,11 +29,8 @@ export const construirEsqueletoTabla = (fecha, turno, porHoraBD) => {
                 minutos: d.Minutos,
                 motivo: d.Motivo,
                 maquina: d.Maquina || '',
-                observacion: d.Observacion || d.Observaciones || ''
+                observacion: d.Observacion || d.Observaciones || d.Detalle || ''
             })) : [],
-            observaciones: perdidasDB && perdidasDB.PerdidaDetalle
-                ? perdidasDB.PerdidaDetalle.map( d => `${d.Minutos}m - ${d.Motivo} - ${d.Detalle}`).join(' | ')
-                : "",
             supervisor: perdidasDB ? perdidasDB.Supervisor : '0',
             lider: perdidasDB ? perdidasDB.Lider : '0'
         };
