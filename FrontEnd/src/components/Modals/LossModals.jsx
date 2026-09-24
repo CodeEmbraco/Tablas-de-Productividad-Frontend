@@ -126,7 +126,7 @@ const LossModal = ({
                             <tr>
                                 <th style={{ width: '80px' }}>Minutos</th>
                                 <th>Motivo</th>
-                                <th>Máquina</th>
+                                {/* <th>Máquina</th> */}
                                 <th>Descripción / Observación</th>
                                 <th style={{ width: '50px' }}></th>
                             </tr>
@@ -181,7 +181,7 @@ const LossModal = ({
                         </select>
                     </div>
 
-                    <div className="form-group">
+                    {/* <div className="form-group">
                         <label>Máquina:</label>
                         <input
                             type="text"
@@ -191,7 +191,7 @@ const LossModal = ({
                             value={newLossMaquina}
                             onChange={(e) => setNewLossMaquina(e.target.value)}
                         />
-                    </div>
+                    </div> */}
 
                     <div className="form-group" style={{ flex: 1 }}>
                         <label>Descripción:</label>

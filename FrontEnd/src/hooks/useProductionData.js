@@ -17,18 +17,18 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
 
     const saveLossRealTime = async (hora, minutosCalculados, detallesNuevos, idSupervisor, idLider) => {
         setIsSaving(true);
-        try{
-            const padre = await apiFunctions.syncParentLoss( fecha, hora, minutosCalculados, idSupervisor, idLider);
-            for(const detalle of detallesNuevos){
+        try {
+            const padre = await apiFunctions.syncParentLoss(fecha, hora, minutosCalculados, idSupervisor, idLider);
+            for (const detalle of detallesNuevos) {
                 await apiFunctions.addLossDetail(padre.data.IdPerdida, detalle);
             }
             await fetchAll(true);
-        } catch (error){
+        } catch (error) {
             console.warn("Fallo de red detectado, guardando de localmente");
 
             const queueKey = `offline_queue_${linea}`;
             const queue = JSON.parse(localStorage.getItem(queueKey)) || [];
-            queue.push({ hora, minutosCalculados, detallesNuevos, fecha, turno, idSupervisor, idLider});
+            queue.push({ hora, minutosCalculados, detallesNuevos, fecha, turno, idSupervisor, idLider });
             localStorage.setItem(queueKey, JSON.stringify(queue));
         } finally {
             setIsSaving(false);
@@ -38,34 +38,34 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
     const syncOfflineQueue = async () => {
         const queueKey = `offline_queue_${linea}`;
         const queue = JSON.parse(localStorage.getItem(queueKey)) || [];
-        if(queue.length === 0) return;
+        if (queue.length === 0) return;
 
         setIsSaving(true);
         try {
             console.log(`Sincronizando ${queue.length} registros pendientes...`);
-            for (const item of queue){
-                const padre = await apiFunctions.syncParentLoss( item.fecha, item.hora, item.minutosCalculados, item.idSupervisor, item.idLider );
-                for (const detalle of item.detallesNuevos){
+            for (const item of queue) {
+                const padre = await apiFunctions.syncParentLoss(item.fecha, item.hora, item.minutosCalculados, item.idSupervisor, item.idLider);
+                for (const detalle of item.detallesNuevos) {
                     await apiFunctions.addLossDetail(padre.data.IdPerdida, detalle);
                 }
             }
             localStorage.removeItem(queueKey);
-        } catch(error){
+        } catch (error) {
             console.warn("La red sigue inestable, se reintentará en el próximo ciclo");
-        } finally{
+        } finally {
             setIsSaving(false);
         }
     }
 
     const deleteLossRealTime = async (idDetalle) => {
-        setIsSaving (true); 
-        try{
+        setIsSaving(true);
+        try {
             await apiFunctions.deleteLossDetail(idDetalle);
             await fetchAll(true);
-        } catch (error){
+        } catch (error) {
             console.error("Error al borrar detalle", error);
             alert("Sin conexión! No se pudo borrar el registro");
-        } finally{
+        } finally {
             setIsSaving(false);
         }
     }
@@ -75,21 +75,21 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
         if (!turno || turno === '0') return;
 
         try {
-            
+
             const [megaData, shiftsStatus] = await Promise.all([
                 apiFunctions.getDailyProduction(fecha),
                 apiFunctions.getShiftsStatus(fecha)
             ])
 
             const { totalDia, turnos, porHora } = megaData.produccion;
-            const currentShiftData = turnos[`T${turno}`] || { produccion: 0, meta: 0, eficiencia: 0};
+            const currentShiftData = turnos[`T${turno}`] || { produccion: 0, meta: 0, eficiencia: 0 };
 
             const tableItems = construirEsqueletoTabla(fecha, turno, porHora);
 
             const totalDelta = [
-                {turno: 1, contador: turnos.T1.produccion, MetaEfectivaTurno: turnos.T1.meta},
-                {turno: 2, contador: turnos.T2.produccion, MetaEfectivaTurno: turnos.T2.meta},
-                {turno: 3, contador: turnos.T3.produccion, MetaEfectivaTurno: turnos.T3.meta}
+                { turno: 1, contador: turnos.T1.produccion, MetaEfectivaTurno: turnos.T1.meta },
+                { turno: 2, contador: turnos.T2.produccion, MetaEfectivaTurno: turnos.T2.meta },
+                { turno: 3, contador: turnos.T3.produccion, MetaEfectivaTurno: turnos.T3.meta }
             ];
 
             setData(prev => ({
@@ -136,85 +136,4 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
     }, [fetchAll, fecha, turno]);
 
     return { ...data, toggleShiftDB, fetchAll, saveLossRealTime, deleteLossRealTime };
-};
-
-export const useProductionDataLite = (fecha, apiFunctions, lineNo = null, liteMode = 'full') => {
-    const [data, setData] = useState({
-        totalDia: 0,
-        accGoal: 0,
-        totalDelta: [],
-        shiftsStatus: [],
-        loading: true,
-        error: null
-    });
-
-    const fetchAll = useCallback(async (isPoll = false) => {
-        if (!isPoll) setData(prev => ({ ...prev, loading: true }));
-
-        try {
-            if (liteMode === 'basic') {
-                const [totalDiaRes, effectiveGoalRes] = await Promise.all([
-                    apiFunctions.getTotalDate(fecha, lineNo),
-                    apiFunctions.getLineEffectiveGoalDay(fecha, lineNo)
-                ]);
-
-                const accGoal = effectiveGoalRes.success && Array.isArray(effectiveGoalRes.data) && effectiveGoalRes.data.length > 0
-                    ? (effectiveGoalRes.data[0].MetaDiaAcumuladaTotal || 0)
-                    : 0;
-
-                setData({
-                    totalDia: totalDiaRes?.TOTAL_DIA || 0,
-                    accGoal: accGoal,
-                    totalDelta: [],
-                    shiftsStatus: [],
-                    loading: false,
-                    error: null
-                });
-            } else {
-                const [totalDiaRes, effectiveGoalRes, prodDelta, shiftsStatus] = await Promise.all([
-                    apiFunctions.getTotalDate(fecha, lineNo),
-                    apiFunctions.getLineEffectiveGoalDay(fecha, lineNo),
-                    apiFunctions.getTotalShiftDelta(fecha, lineNo),
-                    apiFunctions.getShiftsStatus(fecha, lineNo)
-                ]);
-
-                const accGoal = effectiveGoalRes.success && Array.isArray(effectiveGoalRes.data) && effectiveGoalRes.data.length > 0
-                    ? (effectiveGoalRes.data[0].MetaDiaAcumuladaTotal || 0)
-                    : 0;
-
-                setData({
-                    totalDia: totalDiaRes?.TOTAL_DIA || 0,
-                    accGoal: accGoal,
-                    totalDelta: prodDelta || [],
-                    shiftsStatus: shiftsStatus || [],
-                    loading: false,
-                    error: null
-                });
-            }
-        } catch (error) {
-            console.error("Error fetching lite data:", error);
-            setData(prev => ({ ...prev, error, loading: false }));
-        }
-    }, [fecha, apiFunctions, lineNo, liteMode]);
-
-    const toggleShiftDB = useCallback(async (turnoId, estadoActual) => {
-        try {
-            const nuevoEstado = !estadoActual;
-            await apiFunctions.postShiftToggle(fecha, turnoId, nuevoEstado, lineNo);
-            fetchAll(true);
-        } catch (err) {
-            console.error("Error al cambiar el estado del turno en el Hook Lite:", err);
-        }
-    }, [apiFunctions, fecha, lineNo, fetchAll]);
-
-    useEffect(() => {
-        const isToday = fecha === getFormattedDate();
-        fetchAll();
-        if (isToday) {
-            const interval = setInterval(() => fetchAll(true), 30000);
-            return () => clearInterval(interval);
-        }
-    }, [fetchAll, fecha]);
-
-    return { ...data, isSaving, toggleShiftDB, fetchAll };
 };

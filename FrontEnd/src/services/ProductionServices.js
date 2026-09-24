@@ -8,8 +8,15 @@ const api = axios.create({
 const productionService = {
     //TABLA DE PRODUCTIVIDAD
     getDailyProduction: async (lineID, date) => {
-        const params = { fecha: date};
-        const response = await api.get(`api/${lineID}/production`, {params});
+        const params = { fecha: date };
+        const response = await api.get(`api/${lineID}/production`, { params });
+        return response.data;
+    },
+
+    //DASHBOARD
+    getDashboardProduction: async (date) => {
+        const params = { fecha: date };
+        const response = await api.get(`api/dashboard/production`, { params });
         return response.data;
     },
 
@@ -36,7 +43,7 @@ const productionService = {
         const response = await api.delete(`api/losses/details/${idDetalle}`);
         return response.data;
     },
-    
+
     //ESTADOS DE TURNO
     getShiftsStatus: async (lineId, fecha, lineNo = null) => {
         const params = { fecha: fecha, lineId: lineId };
