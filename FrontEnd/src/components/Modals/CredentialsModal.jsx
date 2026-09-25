@@ -9,7 +9,7 @@ const CredentialsModal = ({ isOpen, onClose, onUnlock }) => {
 
     const handleLogin = () => {
         // Validación simple de credenciales
-        if (user.toLowerCase() === 'admin' && password === '1234') {
+        if (user.toLowerCase() === import.meta.env.VITE_ADMIN_USERNAME && password === import.meta.env.VITE_ADMIN_PASSWORD) {
             onUnlock();
             onClose();
             setUser('');
