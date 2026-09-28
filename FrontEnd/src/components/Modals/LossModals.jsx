@@ -136,7 +136,7 @@ const LossModal = ({
                                 <tr key={idx}>
                                     <td style={{ fontWeight: 'bold', color: '#D32F2F' }}>{item.minutos} min</td>
                                     <td>{item.motivo}</td>
-                                    <td style={{ color: '#777', fontSize: '0.85rem' }}>{item.maquina || '---'}</td>
+                                    {/* <td style={{ color: '#777', fontSize: '0.85rem' }}>{item.maquina || '---'}</td> */}
                                     <td>{item.observacion}</td>
                                     <td>
                                         <button className="btn-delete-loss" onClick={() => removeLossItem(idx)}>X</button>
