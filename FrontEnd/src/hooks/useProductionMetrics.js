@@ -92,8 +92,8 @@ export const useProductionMetrics = (
                 } else if (selectedDate === today && index === currentIdx){
                     let totalCuartos = shiftId === '1' ? 32 : (shiftId === '2' ? 36 : 28);
                     let hrsPasadas = shiftId === '1' ? (currentHour - 6) 
-                    : (shiftId === '2' ? (currentHour - 14) 
-                        : (current === 23 ? 0 : currentHour + 1));
+                        : (shiftId === '2' ? (currentHour - 14) 
+                        : (currentHour === 23 ? 0 : currentHour + 1));
                     let cuartosTranscurridos = Math.max(0, Math.min((hrsPasadas * 4) + cuartosActuales, totalCuartos));
                     return acc + (metaTotalTurnoBD * (cuartosTranscurridos / totalCuartos));
                 }
