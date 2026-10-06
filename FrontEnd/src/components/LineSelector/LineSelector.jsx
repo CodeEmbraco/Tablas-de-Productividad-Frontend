@@ -31,7 +31,8 @@ const LineSelector = ({ currentLineId }) => {
         >
             {LINES.map(line => (
                 <option key={line.id} value={line.id}>
-                    {line.name}
+                    {/* {line.name} */}
+                    LINEA 1
                 </option>
             ))}
         </select>

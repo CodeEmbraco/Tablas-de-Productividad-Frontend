@@ -238,7 +238,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
             {/* NOTIFICACIÓN DE EXPIRACIÓN ADMIN */}
             {isAdmin && <AdminTimer onExpire={handleExpire} />}
 
-            <Header line={headerTitle} />
+            <Header line="LINEA 1" /> {/*headerTitle />*/}
 
             <div className="top-panel-container">
                 <div className="panel-left">
