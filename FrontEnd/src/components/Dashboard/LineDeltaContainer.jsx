@@ -9,23 +9,27 @@ const LineDeltaContainer = ({ lineConfig, isLarge, isAdmin, onAccessDenied, onTo
     const datos = lineConfig.datosAPI;
     const totalDia = datos.totalDia?.produccion || 0;
 
-    const accGoal = datos.totalDia?.metaAcumulada || 0; 
+    const accGoal = datos.totalDia?.metaAcumulada || 0;
     const metaTotal = datos.totalDia?.metaTotal || 0;
 
     const eficiencia = accGoal > 0 ? Math.round((totalDia / accGoal) * 100) : 0;
+
     // Formateamos el objeto de turnos para DashboardDelta
     const totalDelta = [
         datos.turnos?.T1 || { produccion: 0, meta: 0 },
         datos.turnos?.T2 || { produccion: 0, meta: 0 },
         datos.turnos?.T3 || { produccion: 0, meta: 0 }
     ];
-    // Mockeamos el shiftsStatus si el endpoint nuevo no lo manda aún, 
-    // o asume activo si hay meta en ese turno
-    const shiftsStatus = [
-        { Turno: 1, Activo: (datos.turnos?.T1?.meta > 0) },
-        { Turno: 2, Activo: (datos.turnos?.T2?.meta > 0) },
-        { Turno: 3, Activo: (datos.turnos?.T3?.meta > 0) }
-    ];
+
+    // Usamos shiftsStatus real del API si viene en datosAPI (inyectado desde GlobalDashboard),
+    // con fallback basado en si hay meta configurada por turno
+    const shiftsStatus = datos.shiftsStatus?.length > 0
+        ? datos.shiftsStatus
+        : [
+            { Turno: 1, Activo: (datos.turnos?.T1?.meta > 0) },
+            { Turno: 2, Activo: (datos.turnos?.T2?.meta > 0) },
+            { Turno: 3, Activo: (datos.turnos?.T3?.meta > 0) }
+        ];
 
     const status = eficiencia >= 100 ? "bueno" : eficiencia >= 90 ? "medio" : "mal";
     const deltaColor = accGoal === 0 ? '#4caf50' : (eficiencia >= 100 ? '#4caf50' : (eficiencia >= 90 ? '#fbc02d' : '#ea5a00'));

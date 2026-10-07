@@ -170,4 +170,111 @@ export const esHoraTerminada = (fecha, horaFija, turno) => {
 
     const now = new Date();
     return now >= rowEnd;
-}
+};
+
+/**
+ * Obtiene la meta de un turno específico a partir de un objeto o arreglo de turnos.
+ * Soporta formatos:
+ * - Objeto: { T1: { meta: 100 }, T2: { meta: 200 } }
+ * - Arreglo: [{ turno: 1, MetaEfectivaTurno: 100 }, ...] o [{ meta: 100 }, ...]
+ */
+export const getShiftMeta = (turnosData, shiftId) => {
+    if (!turnosData) return 0;
+
+    const keyUpper = `T${shiftId}`;
+    const keyLower = `t${shiftId}`;
+
+    if (turnosData[keyUpper] !== undefined) {
+        return Number(turnosData[keyUpper]?.meta ?? turnosData[keyUpper]?.MetaEfectivaTurno ?? 0) || 0;
+    }
+    if (turnosData[keyLower] !== undefined) {
+        return Number(turnosData[keyLower]?.meta ?? turnosData[keyLower]?.MetaEfectivaTurno ?? 0) || 0;
+    }
+    if (turnosData[shiftId] !== undefined && typeof turnosData[shiftId] === 'object') {
+        return Number(turnosData[shiftId]?.meta ?? turnosData[shiftId]?.MetaEfectivaTurno ?? 0) || 0;
+    }
+
+    if (Array.isArray(turnosData)) {
+        const found = turnosData.find(item => 
+            String(item?.turno ?? item?.Turno ?? item?.id ?? '') === String(shiftId)
+        );
+        if (found) {
+            return Number(found.MetaEfectivaTurno ?? found.meta ?? 0) || 0;
+        }
+        const idx = parseInt(shiftId, 10) - 1;
+        if (turnosData[idx]) {
+            return Number(turnosData[idx].MetaEfectivaTurno ?? turnosData[idx].meta ?? 0) || 0;
+        }
+    }
+
+    return 0;
+};
+
+/**
+ * Determina si un turno está activo según shiftsStatus o si su meta es mayor a 0.
+ */
+export const isShiftActive = (shiftsStatus, shiftId, shiftMeta = 0) => {
+    if (shiftsStatus && Array.isArray(shiftsStatus) && shiftsStatus.length > 0) {
+        const statusObj = shiftsStatus.find(s => 
+            String(s?.Turno ?? s?.turno ?? s?.id ?? '') === String(shiftId)
+        );
+        if (statusObj) {
+            return Boolean(statusObj.Activo ?? statusObj.ACTIVO ?? statusObj.activo);
+        }
+    }
+    return shiftMeta > 0;
+};
+
+/**
+ * Calcula la meta progresiva acumulada del día cada 15 minutos.
+ *
+ * @param {Object|Array} turnosData - Datos de turnos (T1, T2, T3)
+ * @param {string} selectedDate - Fecha seleccionada 'YYYY-MM-DD'
+ * @param {Date} currentTime - Hora/fecha de evaluación
+ * @param {Array} shiftsStatus - Estado de turnos
+ * @returns {number} Meta acumulada redondeada
+ */
+export const calcularMetaDiaProgresiva = (
+    turnosData,
+    selectedDate = getFormattedDate(),
+    currentTime = new Date(),
+    shiftsStatus = null
+) => {
+    if (!turnosData) return 0;
+
+    const today = getFormattedDate(currentTime);
+    const actualShift = getCurrentShift(currentTime);
+    const currentHour = currentTime.getHours();
+    const cuartosActuales = Math.floor(currentTime.getMinutes() / 15); // 0, 1, 2, 3
+
+    const SHIFT_ORDER = ['1', '2', '3'];
+    const currentIdx = selectedDate === today ? SHIFT_ORDER.indexOf(actualShift) : (selectedDate < today ? 3 : -1);
+
+    let metaDiaProgresiva = 0;
+
+    for (let index = 0; index < SHIFT_ORDER.length; index++) {
+        const shiftId = SHIFT_ORDER[index];
+        const metaTotalTurno = getShiftMeta(turnosData, shiftId);
+
+        if (!isShiftActive(shiftsStatus, shiftId, metaTotalTurno)) {
+            continue;
+        }
+
+        if (selectedDate < today || index < currentIdx) {
+            // Turno finalizado en el día o día pasado
+            metaDiaProgresiva += metaTotalTurno;
+        } else if (selectedDate === today && index === currentIdx) {
+            // Turno actual en curso: incremento proporcional cada 15 minutos
+            const totalCuartos = shiftId === '1' ? 32 : (shiftId === '2' ? 36 : 28);
+            const hrsPasadas = shiftId === '1' ? (currentHour - 6) 
+                : (shiftId === '2' ? (currentHour - 14) 
+                : (currentHour === 23 ? 0 : currentHour + 1));
+            const cuartosTranscurridos = Math.max(0, Math.min((hrsPasadas * 4) + cuartosActuales, totalCuartos));
+            metaDiaProgresiva += metaTotalTurno * (cuartosTranscurridos / totalCuartos);
+        }
+        // index > currentIdx: turno futuro, 0
+    }
+
+    return Math.round(metaDiaProgresiva);
+};
+

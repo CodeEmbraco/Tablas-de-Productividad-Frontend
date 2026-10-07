@@ -19,14 +19,25 @@ import AdminAccessButton from '@components/Admin/AdminAccessButton';
 import ConsolidatedRate from '@components/Dashboard/ConsolidatedRate';
 
 import { LINES_CONFIG } from '@config/linesConfig';
+import { calcularMetaDiaProgresiva } from '@utils/shiftUtils';
 
 const GlobalDashboard = () => {
     const { selectedDate, selectedShift } = useProduction();
     const { isAdmin, handleUnlock, handleExpire, adminWarning, showWarning } = useAdmin();
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Actualiza la referencia del tiempo cada 30s para recalcular los cuartos de hora
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 30000);
+        return () => clearInterval(timer);
+    }, []);
 
     // 1. Configuramos la API para el hook global
     const apiConfig = useMemo(() => ({
         getDashboardProduction: (date) => productionService.getDashboardProduction(date),
+        getShiftsStatus: (lineId, date) => productionService.getShiftsStatus(lineId, date),
         postShiftToggle: (date, shift, shiftStatus, lineId) => productionService.shiftToggleStatus(lineId, date, shift, shiftStatus)
     }), []);
 
@@ -37,7 +48,7 @@ const GlobalDashboard = () => {
         toggleShiftDB
     } = useDashboardData(selectedDate, apiConfig);
 
-    // 3. Mezclamos los datos del backend con las imágenes estáticas de LINES_CONFIG
+    // 3. Mezclamos los datos del backend con las imágenes estáticas de LINES_CONFIG y calculamos la meta progresiva cada 15 min
     const lineasProcesadas = useMemo(() => {
         if (!dashboardData || dashboardData.length === 0) return [];
 
@@ -48,14 +59,45 @@ const GlobalDashboard = () => {
                     (c.lineNo && `${c.id}_${c.lineNo}`.toLowerCase() === lineaDB.LineId.toLowerCase())
             ) || {};
 
+            const shiftsStatus = lineaDB.shiftsStatus || [
+                { Turno: 1, Activo: (lineaDB.turnos?.T1?.meta > 0) },
+                { Turno: 2, Activo: (lineaDB.turnos?.T2?.meta > 0) },
+                { Turno: 3, Activo: (lineaDB.turnos?.T3?.meta > 0) }
+            ];
+
+            const metaAcumulada = calcularMetaDiaProgresiva(
+                lineaDB.turnos || lineaDB.totalDelta,
+                selectedDate,
+                currentTime,
+                shiftsStatus
+            );
+
+            const metaTotal = Number(lineaDB.totalDia?.metaTotal) > 0
+                ? Number(lineaDB.totalDia.metaTotal)
+                : (
+                    (Number(lineaDB.turnos?.T1?.meta) || 0) +
+                    (Number(lineaDB.turnos?.T2?.meta) || 0) +
+                    (Number(lineaDB.turnos?.T3?.meta) || 0)
+                );
+
+            const datosAPI = {
+                ...lineaDB,
+                shiftsStatus,
+                totalDia: {
+                    ...lineaDB.totalDia,
+                    metaTotal,
+                    metaAcumulada
+                }
+            };
+
             return {
                 ...baseConfig, // Trae imgURL
                 id: lineaDB.LineId,
                 name: lineaDB.Nombre,
-                datosAPI: lineaDB // Inyectamos la data de producción aquí
+                datosAPI // Inyectamos la data de producción con la meta acumulada progresiva
             };
         });
-    }, [dashboardData]);
+    }, [dashboardData, selectedDate, currentTime]);
 
     const [activeIndex, setActiveIndex] = useState(0);
 

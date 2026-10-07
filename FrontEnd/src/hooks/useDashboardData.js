@@ -11,7 +11,21 @@ export const useDashboardData = (fecha, apiFunctions) => {
         if (!isPoll) setLoading(true);
 
         try {
-            const data = await apiFunctions.getDashboardProduction(fecha);
+            const rawData = await apiFunctions.getDashboardProduction(fecha);
+            // Usamos Promise.all para obtener el estado de los turnos de todas las líneas en paralelo
+            const statusPromises = rawData.map(line =>
+                apiFunctions.getShiftsStatus(line.LineId, fecha)
+            );
+            const shiftsStatusArray = await Promise.all(statusPromises);
+
+            // Mapeamos los resultados asegurando que cada línea tenga su propio shiftsStatus
+            const data = rawData.map((line, index) => ({
+                ...line,
+                shiftsStatus: shiftsStatusArray[index] || []
+            }));
+
+            console.log("data del dashboard:", data);
+
             setDashboardData(data || []);
             setError(null);
         } catch (error) {

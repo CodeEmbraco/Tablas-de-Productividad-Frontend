@@ -1,5 +1,4 @@
-export const getFormattedDate = () => {
-    const date = new Date();
+export const getFormattedDate = (date = new Date()) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -12,8 +11,7 @@ export const SHIFT_HOURS = {
     '3': [23, 6, 7],
 };
 
-export const getCurrentShift = () => {
-    const now = new Date();
+export const getCurrentShift = (now = new Date()) => {
     const currentHour = now.getHours(); 
     if (currentHour >= 6 && currentHour < 14) return '1';
     if (currentHour >= 14 && currentHour < 23) return '2';
