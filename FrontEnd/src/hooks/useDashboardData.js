@@ -24,7 +24,7 @@ export const useDashboardData = (fecha, apiFunctions) => {
                 shiftsStatus: shiftsStatusArray[index] || []
             }));
 
-            console.log("data del dashboard:", data);
+            //console.log("data del dashboard:", data);
 
             setDashboardData(data || []);
             setError(null);
