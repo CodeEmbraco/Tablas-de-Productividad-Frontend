@@ -1,8 +1,19 @@
 // src/components/Modals/LossModal.jsx
 import React, { useState, useEffect } from 'react';
 import './LossModals.css';
+import { lossCatalog, getLossDescription } from '@config/LossCatalog'; 
 
-const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], perdidaCalculada = 0 }) => {
+const LossModal = ({ 
+        isOpen,
+        onClose, 
+        onSave, 
+        onDeleteDetail, 
+        currentSlot, 
+        initialData = [], 
+        perdidaCalculada = 0,
+        supervisor,
+        lider
+    }) => {
     const [tempLossList, setTempLossList] = useState([]);
     const [newLossMinutos, setNewLossMinutos] = useState('');
     const [newLossMotivo, setNewLossMotivo] = useState('');
@@ -34,6 +45,10 @@ const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], per
             alert("Debe seleccionar un motivo");
             return;
         }
+        if (newLossMinutos > noJustificado){
+            alert("Los minutos justificados superan los minutos no justificados");
+            return;
+        }
 
         const newItem = {
             minutos: parseInt(newLossMinutos),
@@ -49,17 +64,25 @@ const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], per
         setNewLossObs('');
     };
 
-    const removeLossItem = (index) => {
-        setTempLossList(tempLossList.filter((_, i) => i !== index));
+    const removeLossItem = async (index) => {
+        const itemToRemove = tempLossList[index];
+        if (itemToRemove.IdDetalle) {
+            const confirm = window.confirm("¿Estás seguro que quieres eliminar este registro?")
+            if(confirm) {
+                await onDeleteDetail(itemToRemove.IdDetalle);
+                setTempLossList(tempLossList.filter((_, i) => i !== index));
+            }
+        } else {
+            setTempLossList(tempLossList.filter((_, i) => i !== index));
+        }
     };
 
     const handleConfirm = () => {
+        const nuevosDetalles = tempLossList.filter(item => !item.IdDetalle);
         const totalMinutes = tempLossList.reduce((sum, item) => sum + (item.minutos || 0), 0);
-        const formattedString = tempLossList
-            .map(item => `${item.minutos} min ${item.motivo}: ${item.observacion}`)
-            .join(' | ');
 
-        onSave(totalMinutes, formattedString, tempLossList);
+        //console.log("debug",totalMinutes," | ", nuevosDetalles," | ", supervisor," | ", lider)
+        onSave(totalMinutes, nuevosDetalles, supervisor, lider);
         onClose();
     };
 
@@ -103,7 +126,7 @@ const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], per
                             <tr>
                                 <th style={{ width: '80px' }}>Minutos</th>
                                 <th>Motivo</th>
-                                <th>Máquina</th>
+                                {/* <th>Máquina</th> */}
                                 <th>Descripción / Observación</th>
                                 <th style={{ width: '50px' }}></th>
                             </tr>
@@ -113,7 +136,7 @@ const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], per
                                 <tr key={idx}>
                                     <td style={{ fontWeight: 'bold', color: '#D32F2F' }}>{item.minutos} min</td>
                                     <td>{item.motivo}</td>
-                                    <td style={{ color: '#777', fontSize: '0.85rem' }}>{item.maquina || '---'}</td>
+                                    {/* <td style={{ color: '#777', fontSize: '0.85rem' }}>{item.maquina || '---'}</td> */}
                                     <td>{item.observacion}</td>
                                     <td>
                                         <button className="btn-delete-loss" onClick={() => removeLossItem(idx)}>X</button>
@@ -150,37 +173,15 @@ const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], per
                             onChange={(e) => setNewLossMotivo(e.target.value)}
                         >
                             <option value="" disabled>--Selecciona--</option>
-                            <option value="A1">A1 - Falla Mecánica</option>
-                            <option value="A2">A2 - Falla Eléctrica</option>
-                            <option value="A3">A3 - Neumática u otras</option>
-                            <option value="B1">B1 - Falta de Energía</option>
-                            <option value="B2">B2 - Falta de Aire Comprimido</option>
-                            <option value="B3">B3 - Falta de Vapor</option>
-                            <option value="C1">C1 - Falta de Material</option>
-                            <option value="C2">C2 - Falta de ...</option>
-                            <option value="D1">D1 - Hora de Comida</option>
-                            <option value="D2">D2 - Simulacro de Emergencia</option>
-                            <option value="E1">E1 - Falta de Operador</option>
-                            <option value="E2">E2 - Gymnastic</option>
-                            <option value="E3">E3 - Entrenamiento</option>
-                            <option value="E4">E4 - Baño</option>
-                            <option value="E5">E5 - Junta</option>
-                            <option value="F1">F1 - Cambio de Herramienta</option>
-                            <option value="F2">F2 - Changeover</option>
-                            <option value="F3">F3 - Cambio de Materia Prima</option>
-                            <option value="G1">G1 - Ajuste de Maquina</option>
-                            <option value="G2">G2 - Ajuste de Herramientas</option>
-                            <option value="H1">H1 - Paros Menores - Bloqueo</option>
-                            <option value="H2">H2 - Paros Menores - Starving</option>
-                            <option value="H3">H3 - Paros Menores - Inactivo</option>
-                            <option value="H4">H4 - Paros Menores - Fallo</option>
-                            <option value="I1">I1 - Perdida de Velocidad</option>
-                            <option value="J1">J1 - Scrap</option>
-                            <option value="J2">J2 - Re-Trabajo</option>
+                            {Object.entries(lossCatalog).map(([codigo, descripcion]) => (
+                                <option key={codigo} value={codigo}>
+                                    {codigo} - {descripcion}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
-                    <div className="form-group">
+                    {/* <div className="form-group">
                         <label>Máquina:</label>
                         <input
                             type="text"
@@ -190,7 +191,7 @@ const LossModal = ({ isOpen, onClose, onSave, currentSlot, initialData = [], per
                             value={newLossMaquina}
                             onChange={(e) => setNewLossMaquina(e.target.value)}
                         />
-                    </div>
+                    </div> */}
 
                     <div className="form-group" style={{ flex: 1 }}>
                         <label>Descripción:</label>

@@ -1,8 +1,11 @@
 import React from 'react';
-import zero from '@assets/zeroproductividad.png'
+import zero from '@assets/zeroproductividad.png';
+import { meta } from '@eslint/js';
 
-const Delta = ({ total,
+const Delta = ({ 
+    total,
     accGoal,
+    metaTotal,
     totalTurno = [],
     eficiencia,
     activeShifts = [],
@@ -15,44 +18,31 @@ const Delta = ({ total,
     const deltaValue = total - accGoal;
     const deltaSign = deltaValue >= 0 ? "+" : "";
 
-    // Lógica de color: Verde (>=100%), Amarillo (90-99%), Rojo (<90%)
-    // Si no hay turnos activos, forzamos gris para no mostrar un estado "crítico" erróneo
     const hasActiveShifts = activeShifts.some(s => s.Activo || s.ACTIVO);
-    
-    // Si no hay turnos activos, O si la meta actual es 0 (el turno aún no empieza) -> Verde
+
     const deltaColor = (!hasActiveShifts || accGoal === 0) 
         ? '#4caf50' 
         : (eficiencia >= 100 ? '#4caf50' : (eficiencia >= 90 ? '#fbc02d' : '#ea5a00'));
     const displayValue = Math.min(Math.max(eficiencia,0), 100);
     
-    // console.log('totalTurno content:', totalTurno);
-    // console.log('totalTurno length:', totalTurno?.length);
     const shifts = [ 
-        { id: '3', label: 'T3' },
-        { id: '1', label: 'T1' },
-        { id: '2', label: 'T2' }
+        { id: '1', label: 'T1', data: totalTurno[0] },
+        { id: '2', label: 'T2', data: totalTurno[1] },
+        { id: '3', label: 'T3', data: totalTurno[2] }
     ].map(shift => {
-        // Buscamos en el arreglo del backend el turno correspondiente (ej. TURNO: 1)
-        const dataTurno = totalTurno.find(item => 
-            String(item.TURNO ?? item.turno ?? item.Turno) === shift.id
-        );
-
         return {
-            ...shift,
-            // Si lo encontró, asignamos el valor del CONTADOR, si no, se queda en 0
-            value: dataTurno ? (dataTurno.CONTADOR ?? dataTurno.contador ?? dataTurno.TOTAL ?? 0) : 0,
-            meta: dataTurno ? (dataTurno.MetaEfectivaTurno ?? 0) : 0
+            id: shift.id,
+            label: shift.label,
+            value: shift.data?.produccion || 0,
+            meta: shift.data?.meta || 0
         };
     });
-
-    //console.log(shifts);
-
+    
     return (
         <>
         <div className='container-delta-dashboard' style={{ 
             display: 'flex', 
             flexDirection: 'row', 
-            // Damos más aire entre los elementos si es grande
             gap: isLarge ? '15px' : '0px' 
         }}>
             <div className='total-dia-delta-dashboard' style={{ flex: 1 }}>
@@ -60,7 +50,6 @@ const Delta = ({ total,
                     <div className='total-dia-title' style={{ fontSize: isLarge ? '1.5rem' : '1rem' }}>
                         TOTAL DÍA
                     </div>
-                    {/* El número principal crece drásticamente */}
                     <div style={{ 
                         fontSize: isLarge ? '4.5rem' : '3.5rem', 
                         fontWeight: 'bold', 
@@ -69,14 +58,13 @@ const Delta = ({ total,
                         transition: 'font-size 0.4s ease'
                     }}>
                         {total}
-                        {/* La meta también crece en proporción */}
                         <span style={{ 
                             fontSize: isLarge ? '2.0rem' : '1.5rem', 
                             color: '#888', 
                             fontWeight: 'normal',
                             transition: 'font-size 0.4s ease'
                         }}>
-                            /{parseInt(accGoal)}
+                            /{parseInt(accGoal || metaTotal)} 
                         </span>
                     </div>
                     <p style={{fontWeight:'bolder', fontSize: isLarge ? '1.2rem' : '1rem', margin:'0px'}}>
@@ -94,19 +82,14 @@ const Delta = ({ total,
                 </div>
             </div>
 
-            <div style={{
-                        alignItems:'center',
-                        justifyContent:'center'
-                        }}>
-                {/* La imagen crece según isLarge */}
+            <div style={{ alignItems:'center', justifyContent:'center' }}>
                 <img 
                     src={imgURL ? imgURL : zero} 
                     alt="Line Icon"
                     fetchPriority="high"
                     style={{
-                        // width: '100%', 
                         maxWidth: isLarge ? '290px' : '200px', 
-                        height: 'auto', 
+                        maxHeight: 'auto', 
                         objectFit: 'contain',
                     }}
                 />

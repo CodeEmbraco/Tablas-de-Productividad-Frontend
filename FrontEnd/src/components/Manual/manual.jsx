@@ -60,9 +60,9 @@ const Manual = ({ isOpen, onClose }) => {
                 </>
 
             ) },
-        { title: "HxH de Producción", 
+        { title: "Hora por Hora de Producción", 
             image: desglosetabla, 
-            desc: "La tabla del HxH se divide en dos secciones: Información de Producción y Desglose de Pérdidas." },
+            desc: "La tabla del hora por hora se divide en dos secciones: Información de Producción y Desglose de Pérdidas." },
         { title: "Información de Producción", 
             image: desglosemetas, 
             desc: (
@@ -82,8 +82,9 @@ const Manual = ({ isOpen, onClose }) => {
             image: desgloseperdidas, 
             desc: (
                 <>
-                <p>• <strong>Pérdidas</strong>: Minutos de pérdidas en la hora</p>
-                <p>• <strong>Observaciones</strong>: Detalle del motivo de pérdidas registrados por el operador</p>
+                <p>• <strong>Pérdidas No Justificadas</strong>: Minutos de pérdidas en la hora calculados a partir del porcentaje de cumplimiento entre la meta y la producción real</p>
+                <p>• <strong>Pérdidas Justificadas</strong>: Minutos de pérdidas justificados por el operador por medio de las <strong>Acciones</strong></p>
+                <p>• <strong>Observaciones</strong>: Observaciones detalladas de los motivos de pérdidas registrados por el operador</p>
                 <p>• <strong>Acciones</strong>: El usuario debe de hacer <strong>Click</strong> en el ícono ⚙️ para registrar pérdidas en la hora seleccionada.</p>
                 </>
             )},
@@ -100,14 +101,6 @@ const Manual = ({ isOpen, onClose }) => {
                     </p>
                 </>
             )},
-        { title: "Guardar Reporte", 
-            image: guardarreporte, 
-            desc: (
-                <>
-                <p>Si el turno ha concluido, para guardar el reporte de pérdidas haga <strong>Click</strong> en <strong>Guardar Reporte</strong>.</p>
-                {/* <p><strong style={{color: 'red'}}><Info style={{paddingTop:'10px'}}/> IMPORTANTE: SOLO GUARDAR REPORTE CUANDO SE TENGAN TODAS LAS PÉRDIDAS REGISTRADAS AL FINAL DEL TURNO</strong></p> */}
-                </>
-            ) },
         { title: "Permisos de Administrador", 
         image: adminbutton, 
         desc: (
