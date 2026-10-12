@@ -30,18 +30,18 @@ const LineRateItem = ({ name, real, metaAcumulada, metaTotal }) => {
 const ConsolidatedRate = ({ lines }) => {
     const totalReal = lines.reduce((acc, curr) => acc + (curr.datosAPI?.totalDia?.produccion || 0), 0);
     const totalMetaAcumulada = lines.reduce((acc, curr) => acc + (curr.datosAPI?.totalDia?.metaAcumulada || 0), 0);
-    const totalMetaFinal = lines.reduce((acc, curr) => acc + (curr.datosAPI?.totalDia?.metaAcumulada || 0), 0);
+    const totalMetaFinal = lines.reduce((acc, curr) => acc + (curr.datosAPI?.totalDia?.metaTotal || curr.datosAPI?.totalDia?.metaAcumulada || 0), 0);
     const totalEficiencia = totalMetaAcumulada > 0 ? (totalReal / totalMetaAcumulada) * 100 : 0;
-    
+
     const statusClass = totalEficiencia >= 100 ? 'bueno' : (totalEficiencia >= 90 ? 'medio' : 'mal');
     const statusImage = statusClass === 'bueno' ? ZeroBien : (statusClass === 'medio' ? ZeroYellow : ZeroMal);
-    
+
     const deltaColor = totalMetaAcumulada === 0 ? '#4caf50' : (totalEficiencia >= 100 ? '#4caf50' : (totalEficiencia >= 90 ? '#fbc02d' : '#ea5a00'));
 
     return (
         <div className="grid-item" style={{ border: `0px`, padding: '10px', boxSizing: 'border-box', pointerEvents: 'none' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center', width: '100%' }}>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                     {lines.map(line => (
                         <LineRateItem
@@ -60,7 +60,7 @@ const ConsolidatedRate = ({ lines }) => {
                         <div style={{ fontSize: '3rem', fontWeight: 'bold', color: deltaColor, lineHeight: 1.1 }}>
                             {totalReal}
                             {/* Muestra la meta final del día para no confundir al operador */}
-                            <span style={{ fontSize: '1.5rem', color: '#888', fontWeight: 'normal' }}>/{parseInt(totalMetaFinal)}</span>
+                            <span style={{ fontSize: '1.5rem', color: '#888', fontWeight: 'normal' }}>/{parseInt(totalMetaAcumulada)}</span>
                         </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>

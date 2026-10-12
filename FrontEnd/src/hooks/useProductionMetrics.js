@@ -68,7 +68,7 @@ export const useProductionMetrics = (
         }
 
         // =================================================================
-        // 2. CÁLCULO DE META DEL DÍA PARA EL DELTA
+        // 2. CÁLCULO DE META DEL DÍA PARA EL DELTA (lógica original)
         // =================================================================
         let metaDiaProgresiva = 0;
 
@@ -122,4 +122,4 @@ export const useProductionMetrics = (
         };
 
     }, [selectedShift, selectedDate, tableItems, totalDelta, shiftsStatus, realTurno, realDia, currentTime]);
-};
+};
