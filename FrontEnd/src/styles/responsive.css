@@ -1,0 +1,382 @@
+/* ==========================================================================
+   responsive.css - Adaptación Móvil / PWA Dashboard
+   ========================================================================== */
+
+@media screen and (max-width: 768px) {
+
+    /* 1. RESET Y ESTRUCTURA GLOBAL */
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+    }
+
+    /* 2. HEADER Y LOGOS */
+    .header {
+        flex-direction: column !important;
+        padding: 15px 10px !important;
+        gap: 10px !important;
+    }
+
+    .logoTabla, .logoZero {
+        position: static !important; /* Quita el posicionamiento absoluto */
+        max-height: 40px !important;
+        margin: 5px auto !important;
+    }
+
+    .tituloPrincipal {
+        font-size: 1.4rem !important;
+        letter-spacing: 1px !important;
+        text-align: center !important;
+    }
+
+    /* 3. LAYOUT SUPERIOR Y FORMULARIO */
+    .top-panel-container {
+        flex-direction: column !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        gap: 15px !important;
+    }
+
+    .panel-left, .panel-right {
+        width: 100% !important;
+        justify-content: center !important;
+        margin-right: 0 !important;
+    }
+
+    .datosGenerales {
+        width: 100% !important;
+        overflow-x: auto !important;
+    }
+
+    .datosGenerales input, 
+    .datosGenerales select {
+        width: 100% !important;
+        max-width: 180px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* 4. MEDIDORES HORIZONTALES (META, REAL E IMAGEN) */
+    .medidores-container {
+        display: flex !important;
+        flex-direction: row !important; /* Mantiene a los 3 en la misma línea */
+        justify-content: space-around !important;
+        align-items: flex-end !important;
+        width: 100% !important;
+        gap: 5px !important;
+    }
+
+    .medidor {
+        width: 32% !important; /* Un tercio de la pantalla cada uno */
+        min-width: 0 !important;
+    }
+
+    .medidor .gauge-wrapper {
+        width: 100% !important;
+    }
+
+    .medidor .gauge-value-text {
+        font-size: 1.1rem !important;
+        margin-top: -5px !important;
+    }
+
+    /* Reducción de la imagen de status/muñeco */
+    .medidores-container img {
+        height: 80px !important; /* Sobreescribe los 250px del estilo inline */
+        width: auto !important;
+        object-fit: contain !important;
+    }
+
+    /* 5. TARJETAS Y CONTENEDORES MÓVILES */
+    .medidor-card, 
+    .card-total-dia {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .total-dia-container {
+        flex-direction: column !important;
+        gap: 15px !important;
+    }
+
+    .vertical-div {
+        display: none !important;
+    }
+
+    /* 6. TABLA DE PRODUCCIÓN Y OCULTACIÓN DE COLUMNAS */
+    .contenedorTabla {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tablaProduccion {
+        width: 100% !important;
+        font-size: 0.85rem !important;
+    }
+
+    .tablaProduccion th, 
+    .tablaProduccion td {
+        padding: 6px 4px !important;
+    }
+
+    /* Ocultar 7ª (Observaciones) y 8ª (Acciones) columna */
+    .tablaProduccion th:nth-child(7),
+    .tablaProduccion th:nth-child(8),
+    .tablaProduccion td:nth-child(7),
+    .tablaProduccion td:nth-child(8) {
+        display: none !important;
+    }
+
+    /* 7. CUADRÍCULA DELTAS (GLOBAL DASHBOARD) */
+    .deltas-grid {
+        grid-template-columns: 1fr !important; /* Pasa de 3 columnas a 1 */
+        gap: 15px !important;
+        padding: 5px !important;
+    }
+
+    /* 8. MODALES Y DIÁLOGOS */
+    .modal-content, 
+    .modal-content-large, 
+    .modal-container {
+        width: 95% !important;
+        max-width: 95% !important;
+        padding: 15px !important;
+        max-height: 85vh !important;
+    }
+
+    .carousel-grid {
+        grid-template-columns: 35px 1fr 35px !important;
+        gap: 5px !important;
+    }
+
+    .add-loss-form {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .btn-admin-access {
+        left: 15px !important;
+    }
+
+
+    /* ==========================================
+    CARRUSEL RESPONSIVE DE PRODUCCIÓN (MÓVIL)
+    ========================================== */
+
+    .production-carousel-container {
+        width: 100%;
+        max-width: 500px; /* Limita el ancho máximo en tablets */
+        margin: 0 auto 20px auto;
+        padding: 0 10px;
+        box-sizing: border-box;
+    }
+
+    /* Cabecera / Navegación */
+    .carousel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--nidec-lightgreen, #009b4a);
+        color: #ffffff;
+        padding: 10px 16px;
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-carousel-nav {
+        background: rgba(255, 255, 255, 0.25);
+        border: none;
+        color: #ffffff;
+        font-size: 1.4rem;
+        font-weight: bold;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.1s ease;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-carousel-nav:active {
+        transform: scale(0.92);
+        background: rgba(255, 255, 255, 0.4);
+    }
+
+    .btn-carousel-nav:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .carousel-time-title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 1.15rem;
+    }
+
+    .carousel-time-title strong {
+        font-size: 1.25rem;
+        margin-left: 4px;
+    }
+
+    .carousel-time-title small {
+        font-size: 0.75rem;
+        opacity: 0.85;
+        margin-top: 2px;
+    }
+
+    /* Cuerpo de la Tarjeta */
+    .production-card {
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        border-top: none;
+        border-radius: 0 0 14px 14px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: background-color 0.3s ease;
+    }
+
+    .production-card.meal-card {
+        background-color: #fff8e1;
+        border-color: #ffe082;
+    }
+
+    /* Filas con datos clave */
+    .card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 1.05rem;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 8px;
+    }
+
+    .card-label {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .card-value {
+        color: #1e293b;
+    }
+
+    .card-value.font-bold {
+        font-weight: 800;
+        font-size: 1.3rem;
+    }
+
+    .card-value.real-value {
+        color: #0284c7;
+    }
+
+    /* Sección de Pérdidas (Lado a lado o apiladas según la pantalla) */
+    .card-row-losses {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .loss-box {
+        padding: 10px;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .loss-box.no-justified {
+        background-color: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+    .loss-box.justified {
+        background-color: #f0fdf4;
+        color: #16a34a;
+        border: 1px solid #bbf7d0;
+    }
+
+    .loss-box.clickable {
+        cursor: pointer;
+        border-style: dashed;
+        transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .loss-box.clickable:active {
+        transform: scale(0.97);
+        background-color: #dcfce7;
+    }
+
+    .loss-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .loss-amount {
+        font-size: 1.15rem;
+        font-weight: 800;
+    }
+
+    /* Observaciones y Botón adicional */
+    .card-row-obs {
+        background: #f8fafc;
+        border-left: 3px solid #94a3b8;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+
+    .card-row-obs p {
+        margin: 4px 0 0 0;
+        color: #334155;
+    }
+
+    .btn-meal-toggle {
+        width: 100%;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-meal-toggle.active {
+        background: #ffedd5;
+        color: #c2410c;
+        border-color: #fdba74;
+    }
+
+    /* Ajuste específico para celulares con pantallas muy angostas (<= 360px) */
+    @media screen and (max-width: 360px) {
+        .card-row-losses {
+            grid-template-columns: 1fr; /* Pasa las pérdidas a una sola columna */
+        }
+        
+        .card-row {
+            font-size: 0.95rem;
+        }
+
+        .card-value.font-bold {
+            font-size: 1.15rem;
+        }
+    }
+}

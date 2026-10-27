@@ -23,10 +23,14 @@ import LineSelector from '@components/LineSelector/LineSelector';
 import ProductionWidgets from '@components/ProductionWidgets/ProductionWidgets';
 import ProductionTable from "@components/ProductionTable/ProductionTable";
 import Delta from '@components/Delta/Delta';
+import ProductionCarousel from "../components/productionCarousel/productionCarousel";
 import LossModal from "@components/Modals/LossModals";
 import GoalsModal from "@components/Modals/GoalsModal";
 import AdminTimer from "@components/Admin/AdminTimer";
 import AdminAccessButton from "@components/Admin/AdminAccessButton";
+
+//Capacitor
+import { Capacitor} from '@capacitor/core';
 
 // Estilos
 import '@styles/global.css';
@@ -42,6 +46,9 @@ import '@styles/global.css';
  * Los archivos originales por línea permanecen como fallback sin modificaciones.
  */
 const TablaGeneric = ({ lineConfigKey }) => {
+
+    const isNative = !Capacitor.isNativePlatform();
+
     const { selectedDate, selectedShift, setSelectedDate, setSelectedShift } = useProduction();
 
     // Obtener la configuración de línea de manera dinámica
@@ -214,7 +221,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
                 </div>
             )}
 
-            {error && (
+            {error & !isNative && (
                 <div className="discreet-notification error-toast">
                     ⚠️ Conexión inestable. Mostrando datos locales.
                 </div>
@@ -269,6 +276,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
                                         </select>
                                     </td>
                                 </tr>
+                                {!isNative && ( 
                                 <tr>
                                     <td>Supervisor:</td>
                                     <td>
@@ -282,6 +290,8 @@ const TablaGeneric = ({ lineConfigKey }) => {
                                         </select>
                                     </td>
                                 </tr>
+                                )}
+                                {!isNative && ( 
                                 <tr>
                                     <td>Team Leader:</td>
                                     <td>
@@ -295,11 +305,13 @@ const TablaGeneric = ({ lineConfigKey }) => {
                                         </select>
                                     </td>
                                 </tr>
-
+                                )}
+                                {!isNative && ( 
                                 <tr>
                                     <td>Línea:</td>
                                     <td><LineSelector currentLineId={lineConfig.id} /></td>
                                 </tr>
+                                )}
                             </tbody>
                         </table>
                     </section>
@@ -325,10 +337,14 @@ const TablaGeneric = ({ lineConfigKey }) => {
                         isAdmin={isAdmin}
                         onAccessDenied={showWarning}
                     />
+                    {!isNative && (
                     <button onClick={() => setIsManualOpen(true)} className="btn-manual">Manual de Uso</button>
+                    )}
                 </div>
             </div>
 
+
+            {!isNative ? (
             <ProductionTable
                 items={tableItems}
                 onOpenModal={(slot) => {
@@ -339,12 +355,27 @@ const TablaGeneric = ({ lineConfigKey }) => {
                 localConfig={config}
                 onSetMeal={setMealHour}
             />
+            ):(
+                <ProductionCarousel
+                items={tableItems}
+                onOpenModal={(slot) => {
+                    setCurrentLossSlot(slot);
+                    setIsLossModalOpen(true);
+                }}
+                localConfig={config}
+                onSetMeal={setMealHour}
+            />
+            )}
+            
 
             <div className="div-btn-guardar">
+                {!isNative && ( 
                 <AdminAccessButton
                     isAdmin={isAdmin}
                     onUnlock={handleUnlock}
                 />
+                )}
+                {!isNative && ( 
                 <button
                     className="btnCambiarMeta"
                     onClick={() => isAdmin ? setIsGoalsModalOpen(true) : showWarning("Acceso Restringido: Desbloquee con el escudo.")}
@@ -352,6 +383,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
                 >
                     Ajustar Meta
                 </button>
+                )}
             </div>
 
             {/* MODALES */}

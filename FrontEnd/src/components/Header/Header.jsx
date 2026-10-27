@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 import './Header.css';
 import logoNidec from '@assets/nidecacim_white.png';
 import Zero from '@assets/zeroproductividad.png';
-import Sidebar from "../Sidebar/sidebar";
+// import Sidebar from "../Sidebar/sidebar";
 
 const Header = ({ line }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -21,16 +21,16 @@ const Header = ({ line }) => {
                     <h2 className="tituloPrincipal">LINEAS DE PRODUCCION: GA COLD MX</h2>
                 )
             }
-            <button
+            {/* <button
                 className="menu-toggle-btn"
                 onClick={() => setIsSidebarOpen(true)}
                 aria-label="Abrir menú"
             >
                 <Menu size={24} />
-            </button>
+            </button> */}
 
 
-            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            {/* <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} /> */}
         </header>
     );
 };

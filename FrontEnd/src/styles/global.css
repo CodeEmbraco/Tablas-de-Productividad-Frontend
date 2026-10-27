@@ -1,3 +1,5 @@
+@import './responsive.css';
+
 #root{
     --nidec-lightgreen : #009b4a;
     --nidec-orange : #ea5a00;
@@ -1109,3 +1111,4 @@
     0% {background-position: 200% 50%;}
     100% {background-position: 0% 50%;}
 }
+
