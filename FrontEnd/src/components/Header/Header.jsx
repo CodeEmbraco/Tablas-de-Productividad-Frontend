@@ -14,7 +14,6 @@ const Header = ({ line }) => {
             {
                 line ? (
                     <>
-                        <h2 className="tituloPrincipal">TABLA DE PRODUCTIVIDAD {line}</h2>
                         {/* <img src={Zero} alt="Zero Productividad" className="logoZero" /> */}
                     </>
                 ) : (

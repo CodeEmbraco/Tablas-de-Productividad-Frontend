@@ -1,6 +1,7 @@
 // React & Router
 import React, { useState, useMemo, useEffect } from "react";
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Context & Hooks
 import { useProduction } from '@context/ProductionContext';
@@ -22,7 +23,7 @@ import Header from '@components/Header/Header';
 import LineSelector from '@components/LineSelector/LineSelector';
 import ProductionWidgets from '@components/ProductionWidgets/ProductionWidgets';
 import ProductionTable from "@components/ProductionTable/ProductionTable";
-import Delta from '@components/Delta/Delta';
+import Delta, { ShiftDeltaCard } from '@components/Delta/Delta';
 import ProductionCarousel from "../components/productionCarousel/productionCarousel";
 import LossModal from "@components/Modals/LossModals";
 import GoalsModal from "@components/Modals/GoalsModal";
@@ -30,7 +31,12 @@ import AdminTimer from "@components/Admin/AdminTimer";
 import AdminAccessButton from "@components/Admin/AdminAccessButton";
 
 //Capacitor
-import { Capacitor} from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
+
+// Assets de estado (Zero)
+import ZeroBien from '@assets/zero-status-color/zero-green.png';
+import ZeroMal from '@assets/zero-status-color/zero-red.png';
+import ZeroYellow from '@assets/zero-status-color/zero-yellow.png';
 
 // Estilos
 import '@styles/global.css';
@@ -47,7 +53,7 @@ import '@styles/global.css';
  */
 const TablaGeneric = ({ lineConfigKey }) => {
 
-    const isNative = !Capacitor.isNativePlatform();
+    const isNative = Capacitor.isNativePlatform();
 
     const { selectedDate, selectedShift, setSelectedDate, setSelectedShift } = useProduction();
 
@@ -63,36 +69,54 @@ const TablaGeneric = ({ lineConfigKey }) => {
         leaders: []
     });
 
-    // Carga de configuración dinámica (Nombre de línea y Personal)
+    // Carga de configuración dinámica (Nombre de línea y Personal) con caché y cancelación
     useEffect(() => {
         if (!lineConfig?.id) return;
-        const fetchLineInfo = async () => {
+
+        const applyLineConfig = (data) => {
+            if (data && data.LineId) {
+                setDynamicConfig({
+                    name: data.Nombre || lineConfig.id,
+                    supervisors: (data.Supervisores || []).map(s => ({
+                        id: String(s.PersonalId),
+                        name: s.Nombre
+                    })),
+                    leaders: (data.Lideres || []).map(l => ({
+                        id: String(l.PersonalId),
+                        name: l.Nombre
+                    }))
+                });
+            }
+        };
+
+        const cached = productionService.getCachedLineConfig(lineConfig.id);
+        if (cached) {
+            applyLineConfig(cached);
+            return;
+        }
+
+        let isActive = true;
+        const debounceTimer = setTimeout(async () => {
             try {
                 const data = await productionService.getLinesConfig(lineConfig.id);
-                if (data && data.LineId) {
-                    setDynamicConfig({
-                        name: data.Nombre || lineConfig.id,
-                        supervisors: data.Supervisores.map(s => ({
-                            id: String(s.PersonalId),
-                            name: s.Nombre
-                        })),
-                        leaders: data.Lideres.map(l =>({
-                            id: String(l.PersonalId),
-                            name: l.Nombre
-                        }))
-                    });
+                if (isActive) {
+                    applyLineConfig(data);
                 }
             } catch (err) {
                 console.error("Error al cargar configuración de línea:", err);
             }
+        }, dynamicConfig.name ? 300 : 0);
+
+        return () => {
+            isActive = false;
+            clearTimeout(debounceTimer);
         };
-        fetchLineInfo();
     }, [lineConfig?.id]);
 
     const apiConfig = useMemo(() => ({
         getDailyProduction: (date) => productionService.getDailyProduction(lineConfig.id, date),
         syncParentLoss: (date, hour, mins, idSup, idLider) => productionService.syncParentLoss(lineConfig.id, date, hour, mins, idSup, idLider),
-        addLossDetail: (lossId, detail) => productionService.addLossDetail(lossId,detail),
+        addLossDetail: (lossId, detail) => productionService.addLossDetail(lossId, detail),
         deleteLossDetail: (detailId) => productionService.deleteLossDetail(detailId),
         getShiftsStatus: (date) => productionService.getShiftsStatus(lineConfig.id, date),
         postShiftToggle: (date, shift, shiftStatus) => productionService.shiftToggleStatus(lineConfig.id, date, shift, shiftStatus)
@@ -111,7 +135,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
         deleteLossRealTime,
         saveLossRealTime,
         fetchAll
-    } = useProductionData(lineConfig.id,selectedDate, selectedShift, lineConfig?.defaultMeta, apiConfig);
+    } = useProductionData(lineConfig.id, selectedDate, selectedShift, lineConfig?.defaultMeta, apiConfig);
 
     // console.log(tableItems);
     // console.log(totalDelta);
@@ -129,10 +153,19 @@ const TablaGeneric = ({ lineConfigKey }) => {
     const turnMetrics = metrics.turno;
     const dayMetrics = metrics.dia;
 
+    const totalPerdidaJustificada = useMemo(() => (
+        tableItems.reduce((acc, item) => acc + (Number(item.perdidaJustificada) || 0), 0)
+    ), [tableItems]);
+
+    const totalPerdidaNoJustificada = useMemo(() => (
+        tableItems.reduce((acc, item) => acc + (Number(item.perdidaNoJustificada ?? item.perdidaCalculada) || 0), 0)
+    ), [tableItems]);
+
     // Estados de Interfaz (UI)
     const [isManualOpen, setIsManualOpen] = useState(false);
     const [isLossModalOpen, setIsLossModalOpen] = useState(false);
     const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false);
+    const [isCarouselModalOpen, setIsCarouselModalOpen] = useState(false);
     const { isAdmin, handleUnlock, handleExpire, adminWarning, showWarning } = useAdmin();
     const [currentLossSlot, setCurrentLossSlot] = useState(null);
     const [supervisor, setSupervisor] = useState('0');
@@ -140,7 +173,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
 
     // Manejadores de Eventos
     const handleSaveFromModal = (totalMins, detailsArray) => {
-        
+
         // 1. VALIDACIÓN ESTRICTA (Bloqueo absoluto)
         if (!supervisor || supervisor === '0') {
             alert("⚠️ Error: Selecciona un Supervisor en el panel superior antes de guardar.");
@@ -154,17 +187,36 @@ const TablaGeneric = ({ lineConfigKey }) => {
 
         if (!detailsArray || detailsArray.length === 0) {
             alert("⚠️ Error: Debes agregar al menos un motivo de pérdida.");
-            return; 
+            return;
         }
 
         // 2. Si llegamos aquí, pasó la validación. Enviamos los estados globales al backend.
         saveLossRealTime(currentLossSlot, totalMins, detailsArray, supervisor, lider);
-        
+
         // 3. Cerramos el modal solo si el guardado fue exitoso
         setIsLossModalOpen(false);
     };
-    
-    const handleSaveGoals = async (data) => {       
+
+    const navigate = useNavigate();
+
+    // Obtenemos todas las claves configuradas (ej: ['cdu', 'electronics', 'preensamble', ...])
+    const availableLineKeys = useMemo(() => Object.keys(LINES_CONFIG), []);
+
+    const handleNextLine = () => {
+        const currentIndex = availableLineKeys.indexOf(lineConfigKey);
+        if (currentIndex === -1) return;
+        const nextIndex = (currentIndex + 1) % availableLineKeys.length;
+        navigate(`/tabla/${availableLineKeys[nextIndex]}`);
+    };
+
+    const handlePrevLine = () => {
+        const currentIndex = availableLineKeys.indexOf(lineConfigKey);
+        if (currentIndex === -1) return;
+        const prevIndex = (currentIndex - 1 + availableLineKeys.length) % availableLineKeys.length;
+        navigate(`/tabla/${availableLineKeys[prevIndex]}`);
+    };
+
+    const handleSaveGoals = async (data) => {
         try {
             if (data.metaCustom) {
                 await productionService.updateCustomGoal(
@@ -211,6 +263,8 @@ const TablaGeneric = ({ lineConfigKey }) => {
 
     // Título del header: si tiene sublineas, agrega el número de linea
     const headerTitle = dynamicConfig.name || 'Cargando...';
+    const currentLineDisplayName = dynamicConfig.name || lineConfig?.name || lineConfigKey;
+    const statusImage = dayMetrics.status === 'bueno' ? ZeroBien : (dayMetrics.status === 'medio' ? ZeroYellow : ZeroMal);
 
     return (
         <div className="bodyTabla">
@@ -221,7 +275,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
                 </div>
             )}
 
-            {error & !isNative && (
+            {error && !isNative && (
                 <div className="discreet-notification error-toast">
                     ⚠️ Conexión inestable. Mostrando datos locales.
                 </div>
@@ -236,10 +290,10 @@ const TablaGeneric = ({ lineConfigKey }) => {
 
             {/* TOAST DE SINCRONIZACION DE PERDIDAS */}
             {isSaving && (
-            <div className="discreet-notification loading-toast" style={{ backgroundColor: '#e8f5e9', color: '#2e7d32', borderLeftColor: '#4caf50' }}>
-                <span className="spinner-mini" style={{ borderLeftColor: '#2e7d32' }}></span> 
-                Guardando información...
-            </div>
+                <div className="discreet-notification loading-toast" style={{ backgroundColor: '#e8f5e9', color: '#2e7d32', borderLeftColor: '#4caf50' }}>
+                    <span className="spinner-mini" style={{ borderLeftColor: '#2e7d32' }}></span>
+                    Guardando información...
+                </div>
             )}
 
             {/* NOTIFICACIÓN DE EXPIRACIÓN ADMIN */}
@@ -276,56 +330,91 @@ const TablaGeneric = ({ lineConfigKey }) => {
                                         </select>
                                     </td>
                                 </tr>
-                                {!isNative && ( 
-                                <tr>
-                                    <td>Supervisor:</td>
-                                    <td>
-                                        <select value={supervisor} onChange={(e) => setSupervisor(e.target.value)}>
-                                            <option value="0" disabled>--Selecciona--</option>
-                                            {dynamicConfig.supervisors.map(s => (
-                                                <option key={typeof s === 'object' ? s.id : s} value={typeof s === 'object' ? s.id : s}>
-                                                    {typeof s === 'object' ? s.name : s}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                </tr>
+                                {!isNative && (
+                                    <tr>
+                                        <td>Supervisor:</td>
+                                        <td>
+                                            <select value={supervisor} onChange={(e) => setSupervisor(e.target.value)}>
+                                                <option value="0" disabled>--Selecciona--</option>
+                                                {dynamicConfig.supervisors.map(s => (
+                                                    <option key={typeof s === 'object' ? s.id : s} value={typeof s === 'object' ? s.id : s}>
+                                                        {typeof s === 'object' ? s.name : s}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                    </tr>
                                 )}
-                                {!isNative && ( 
-                                <tr>
-                                    <td>Team Leader:</td>
-                                    <td>
-                                        <select value={lider} onChange={(e) => setLider(e.target.value)}>
-                                            <option value="0" disabled>--Selecciona--</option>
-                                            {dynamicConfig.leaders.map(l => (
-                                                <option key={typeof l === 'object' ? l.id : l} value={typeof l === 'object' ? l.id : l}>
-                                                    {typeof l === 'object' ? l.name : l}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                </tr>
+                                {!isNative && (
+                                    <tr>
+                                        <td>Team Leader:</td>
+                                        <td>
+                                            <select value={lider} onChange={(e) => setLider(e.target.value)}>
+                                                <option value="0" disabled>--Selecciona--</option>
+                                                {dynamicConfig.leaders.map(l => (
+                                                    <option key={typeof l === 'object' ? l.id : l} value={typeof l === 'object' ? l.id : l}>
+                                                        {typeof l === 'object' ? l.name : l}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                    </tr>
                                 )}
-                                {!isNative && ( 
-                                <tr>
-                                    <td>Línea:</td>
-                                    <td><LineSelector currentLineId={lineConfig.id} /></td>
-                                </tr>
+                                {!isNative && (
+                                    <tr>
+                                        <td>Línea:</td>
+                                        <td><LineSelector currentLineId={lineConfig.id} /></td>
+                                    </tr>
                                 )}
                             </tbody>
                         </table>
+                        {isNative && (
+                            <div className="datos-generales-status-img">
+                                <img src={statusImage} alt="Status Indicator" />
+                            </div>
+                        )}
                     </section>
                 </div>
 
-                <ProductionWidgets
-                    percent={turnMetrics.eficiencia}
-                    statusClass={dayMetrics.status}
-                    goal={turnMetrics.metaAcumulada}
-                    real={totalTurno}
-                    enableAnimation={true}
-                />
+                <div className={isNative ? "widgets-mobile-wrapper" : ""}>
+                    {isNative && (
+                        <div className="mobile-line-switcher">
+                            <button
+                                type="button"
+                                className="btn-line-chevron"
+                                onClick={handlePrevLine}
+                                aria-label="Línea anterior"
+                            >
+                                <ChevronLeft size={24} strokeWidth={2.5} />
+                            </button>
+                            <div className="mobile-line-switcher-title">
+                                Línea: {currentLineDisplayName}
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-line-chevron"
+                                onClick={handleNextLine}
+                                aria-label="Siguiente línea"
+                            >
+                                <ChevronRight size={24} strokeWidth={2.5} />
+                            </button>
+                        </div>
+                    )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <ProductionWidgets
+                        percent={turnMetrics.eficiencia}
+                        statusClass={dayMetrics.status}
+                        goal={turnMetrics.metaAcumulada}
+                        real={totalTurno}
+                        enableAnimation={true}
+                        isNative={isNative}
+                    />
+                </div>
+
+                <div
+                    className={isNative ? "cards-central-row" : ""}
+                    style={!isNative ? { display: 'flex', flexDirection: 'column', gap: '20px' } : undefined}
+                >
                     <Delta
                         total={totalDia}
                         accGoal={dayMetrics.metaTotalAcumulada}
@@ -337,54 +426,85 @@ const TablaGeneric = ({ lineConfigKey }) => {
                         isAdmin={isAdmin}
                         onAccessDenied={showWarning}
                     />
+                    {isNative && (
+                        <ShiftDeltaCard
+                            shift={selectedShift}
+                            real={totalTurno}
+                            plan={turnMetrics.metaAcumulada}
+                            eficiencia={turnMetrics.eficiencia}
+                            perdidaJustificada={totalPerdidaJustificada}
+                            perdidaNoJustificada={totalPerdidaNoJustificada}
+                            onClick={() => setIsCarouselModalOpen(true)}
+                        />
+                    )}
                     {!isNative && (
-                    <button onClick={() => setIsManualOpen(true)} className="btn-manual">Manual de Uso</button>
+                        <button onClick={() => setIsManualOpen(true)} className="btn-manual">Manual de Uso</button>
                     )}
                 </div>
             </div>
 
 
-            {!isNative ? (
-            <ProductionTable
-                items={tableItems}
-                onOpenModal={(slot) => {
-                    setCurrentLossSlot(slot);
-                    setIsLossModalOpen(true);
-                }}
-                caption="INFORMACIÓN DE PRODUCCIÓN"
-                localConfig={config}
-                onSetMeal={setMealHour}
-            />
-            ):(
-                <ProductionCarousel
-                items={tableItems}
-                onOpenModal={(slot) => {
-                    setCurrentLossSlot(slot);
-                    setIsLossModalOpen(true);
-                }}
-                localConfig={config}
-                onSetMeal={setMealHour}
-            />
-            )}
-            
-
-            <div className="div-btn-guardar">
-                {!isNative && ( 
-                <AdminAccessButton
-                    isAdmin={isAdmin}
-                    onUnlock={handleUnlock}
+            {!isNative && (
+                <ProductionTable
+                    items={tableItems}
+                    onOpenModal={(slot) => {
+                        setCurrentLossSlot(slot);
+                        setIsLossModalOpen(true);
+                    }}
+                    caption="INFORMACIÓN DE PRODUCCIÓN"
+                    localConfig={config}
+                    onSetMeal={setMealHour}
                 />
-                )}
-                {!isNative && ( 
-                <button
-                    className="btnCambiarMeta"
-                    onClick={() => isAdmin ? setIsGoalsModalOpen(true) : showWarning("Acceso Restringido: Desbloquee con el escudo.")}
-                    style={{ opacity: isAdmin ? 1 : 0.6 }}
+            )}
+
+            {/* POPUP / MODAL DEL CARRUSEL EN MÓVIL */}
+            {isNative && isCarouselModalOpen && (
+                <div
+                    className="modal-overlay"
+                    onClick={() => setIsCarouselModalOpen(false)}
+                    style={{ zIndex: 1500 }}
                 >
-                    Ajustar Meta
-                </button>
-                )}
-            </div>
+                    <div
+                        className="carousel-modal-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            className="carousel-modal-close"
+                            onClick={() => setIsCarouselModalOpen(false)}
+                            aria-label="Cerrar carrusel"
+                        >
+                            ✕
+                        </button>
+                        <ProductionCarousel
+                            items={tableItems}
+                            onOpenModal={(slot) => {
+                                setCurrentLossSlot(slot);
+                                setIsLossModalOpen(true);
+                            }}
+                            localConfig={config}
+                            onSetMeal={setMealHour}
+                            lineName={currentLineDisplayName}
+                        />
+                    </div>
+                </div>
+            )}
+
+
+            {!isNative && (
+                <div className="div-btn-guardar">
+                    <AdminAccessButton
+                        isAdmin={isAdmin}
+                        onUnlock={handleUnlock}
+                    />
+                    <button
+                        className="btnCambiarMeta"
+                        onClick={() => isAdmin ? setIsGoalsModalOpen(true) : showWarning("Acceso Restringido: Desbloquee con el escudo.")}
+                        style={{ opacity: isAdmin ? 1 : 0.6 }}
+                    >
+                        Ajustar Meta
+                    </button>
+                </div>
+            )}
 
             {/* MODALES */}
             <Manual isOpen={isManualOpen} onClose={() => setIsManualOpen(false)} />

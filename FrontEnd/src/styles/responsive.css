@@ -8,66 +8,131 @@
     html, body {
         overflow-x: hidden !important;
         width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .bodyTabla {
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
     }
 
     /* 2. HEADER Y LOGOS */
     .header {
         flex-direction: column !important;
-        padding: 15px 10px !important;
-        gap: 10px !important;
+        padding: 10px 10px !important;
+        gap: 4px !important;
+        flex-shrink: 0 !important;
     }
 
     .logoTabla, .logoZero {
         position: static !important; /* Quita el posicionamiento absoluto */
-        max-height: 40px !important;
-        margin: 5px auto !important;
+        max-height: 34px !important;
+        margin: 2px auto !important;
     }
 
     .tituloPrincipal {
-        font-size: 1.4rem !important;
+        font-size: 1.25rem !important;
         letter-spacing: 1px !important;
         text-align: center !important;
     }
 
     /* 3. LAYOUT SUPERIOR Y FORMULARIO */
     .top-panel-container {
+        flex: 1 !important;
+        display: flex !important;
         flex-direction: column !important;
-        flex-wrap: wrap !important;
-        width: 100% !important;
-        margin-left: 0 !important;
-        gap: 15px !important;
+        justify-content: stretch !important;
+        flex-wrap: nowrap !important;
+        width: 96% !important;
+        max-width: 520px !important;
+        margin: 0 auto !important;
+        padding: 10px 0 !important;
+        gap: 12px !important;
+        box-sizing: border-box !important;
     }
 
     .panel-left, .panel-right {
         width: 100% !important;
+        flex: 0.9 !important;
+        display: flex !important;
+        align-items: stretch !important;
         justify-content: center !important;
         margin-right: 0 !important;
     }
 
     .datosGenerales {
+        align-items: center !important;
+        justify-content: space-between !important;
         width: 100% !important;
+        height: 100% !important;
+        padding: 6px 10px !important;
+        box-sizing: border-box !important;
         overflow-x: auto !important;
+    }
+
+    .datosGenerales table {
+        border-spacing: 4px 8px !important;
     }
 
     .datosGenerales input, 
     .datosGenerales select {
         width: 100% !important;
-        max-width: 180px !important;
-        font-size: 0.9rem !important;
+        max-width: 190px !important;
+        padding: 6px 8px !important;
+        font-size: 0.95rem !important;
+    }
+
+    .datos-generales-status-img img {
+        height: clamp(75px, 12vh, 110px) !important;
     }
 
     /* 4. MEDIDORES HORIZONTALES (META, REAL E IMAGEN) */
-    .medidores-container {
-        display: flex !important;
-        flex-direction: row !important; /* Mantiene a los 3 en la misma línea */
-        justify-content: space-around !important;
-        align-items: flex-end !important;
+    .widgets-mobile-wrapper {
         width: 100% !important;
-        gap: 5px !important;
+        flex: 1.25 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 8px 10px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.06) !important;
+        box-sizing: border-box !important;
+        gap: 6px !important;
+    }
+
+    .mobile-line-switcher {
+        padding: 6px 10px !important;
+    }
+
+    .mobile-line-switcher-title {
+        font-size: clamp(0.95rem, 2.8vw, 1.15rem) !important;
+    }
+
+    .btn-line-chevron {
+        width: 34px !important;
+        height: 34px !important;
+    }
+
+    .medidores-container {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        width: 100% !important;
+        gap: 8px !important;
     }
 
     .medidor {
-        width: 32% !important; /* Un tercio de la pantalla cada uno */
+        width: 46% !important;
+        max-width: 220px !important;
         min-width: 0 !important;
     }
 
@@ -76,8 +141,8 @@
     }
 
     .medidor .gauge-value-text {
-        font-size: 1.1rem !important;
-        margin-top: -5px !important;
+        font-size: clamp(1.1rem, 3.6vw, 1.4rem) !important;
+        margin-top: -6px !important;
     }
 
     /* Reducción de la imagen de status/muñeco */
@@ -88,6 +153,80 @@
     }
 
     /* 5. TARJETAS Y CONTENEDORES MÓVILES */
+    .cards-central-row {
+        flex: 1.15 !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        width: 100% !important;
+        max-width: 520px !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .cards-central-row .medidor-card {
+        min-width: 0 !important;
+        height: 100% !important;
+        padding: 8px 8px 10px 8px !important;
+        justify-content: space-between !important;
+    }
+
+    .cards-central-row .total-dia-title {
+        font-size: clamp(0.9rem, 2.6vw, 1.05rem) !important;
+        margin-block: 2px !important;
+        padding-left: 0 !important;
+        text-align: center !important;
+    }
+
+    .cards-central-row .total-dia-top-info {
+        flex: 0 0 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
+    .cards-central-row .delta-main-number {
+        font-size: clamp(1.45rem, 4.4vw, 1.8rem) !important;
+        text-align: center !important;
+    }
+
+    .cards-central-row .delta-pill-badge {
+        font-size: clamp(0.85rem, 2.5vw, 1rem) !important;
+        margin-top: 6px !important;
+        padding: 3px 10px !important;
+        text-align: center !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .cards-central-row .total-dia-container {
+        flex: 1 !important;
+        justify-content: flex-start !important;
+        padding: 4px !important;
+        gap: 8px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .cards-central-row .total-dia-right-breakdown {
+        flex: 1 !important;
+        justify-content: space-evenly !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 6px 10px !important;
+        font-size: clamp(0.85rem, 2.4vw, 0.98rem) !important;
+        box-sizing: border-box !important;
+    }
+
+    .app-footer {
+        margin-top: 0 !important;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+        flex-shrink: 0 !important;
+    }
+
     .medidor-card, 
     .card-total-dia {
         width: 100% !important;
@@ -159,224 +298,223 @@
     .btn-admin-access {
         left: 15px !important;
     }
+}
 
+/* ==========================================
+   CARRUSEL RESPONSIVE DE PRODUCCIÓN (MÓVIL / MODAL)
+   ========================================== */
 
-    /* ==========================================
-    CARRUSEL RESPONSIVE DE PRODUCCIÓN (MÓVIL)
-    ========================================== */
+.production-carousel-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 4px;
+    box-sizing: border-box;
+}
 
-    .production-carousel-container {
-        width: 100%;
-        max-width: 500px; /* Limita el ancho máximo en tablets */
-        margin: 0 auto 20px auto;
-        padding: 0 10px;
-        box-sizing: border-box;
+/* Cabecera / Navegación */
+.carousel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--nidec-lightgreen, #009b4a);
+    color: #ffffff;
+    padding: 10px 16px;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-carousel-nav {
+    background: rgba(255, 255, 255, 0.25);
+    border: none;
+    color: #ffffff;
+    font-size: 1.4rem;
+    font-weight: bold;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-carousel-nav:active {
+    transform: scale(0.92);
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.btn-carousel-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.carousel-time-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 1.15rem;
+}
+
+.carousel-time-title strong {
+    font-size: 1.25rem;
+    margin-left: 4px;
+}
+
+.carousel-time-title small {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    margin-top: 2px;
+}
+
+/* Cuerpo de la Tarjeta */
+.production-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: background-color 0.3s ease;
+}
+
+.production-card.meal-card {
+    background-color: #fff8e1;
+    border-color: #ffe082;
+}
+
+/* Filas con datos clave */
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.05rem;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.card-label {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.card-value {
+    color: #1e293b;
+}
+
+.card-value.font-bold {
+    font-weight: 800;
+    font-size: 1.3rem;
+}
+
+.card-value.real-value {
+    color: #0284c7;
+}
+
+/* Sección de Pérdidas (Lado a lado o apiladas según la pantalla) */
+.card-row-losses {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.loss-box {
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.loss-box.no-justified {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.loss-box.justified {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.loss-box.clickable {
+    cursor: pointer;
+    border-style: dashed;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.loss-box.clickable:active {
+    transform: scale(0.97);
+    background-color: #dcfce7;
+}
+
+.loss-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.loss-amount {
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+/* Observaciones y Botón adicional */
+.card-row-obs {
+    background: #f8fafc;
+    border-left: 3px solid #94a3b8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.card-row-obs p {
+    margin: 4px 0 0 0;
+    color: #334155;
+}
+
+.btn-meal-toggle {
+    width: 100%;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-meal-toggle.active {
+    background: #ffedd5;
+    color: #c2410c;
+    border-color: #fdba74;
+}
+
+/* Ajuste específico para celulares con pantallas muy angostas (<= 360px) */
+@media screen and (max-width: 360px) {
+    .card-row-losses {
+        grid-template-columns: 1fr; /* Pasa las pérdidas a una sola columna */
     }
-
-    /* Cabecera / Navegación */
-    .carousel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: var(--nidec-lightgreen, #009b4a);
-        color: #ffffff;
-        padding: 10px 16px;
-        border-radius: 14px 14px 0 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-carousel-nav {
-        background: rgba(255, 255, 255, 0.25);
-        border: none;
-        color: #ffffff;
-        font-size: 1.4rem;
-        font-weight: bold;
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background 0.2s ease, transform 0.1s ease;
-        user-select: none;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .btn-carousel-nav:active {
-        transform: scale(0.92);
-        background: rgba(255, 255, 255, 0.4);
-    }
-
-    .btn-carousel-nav:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-    }
-
-    .carousel-time-title {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-size: 1.15rem;
-    }
-
-    .carousel-time-title strong {
-        font-size: 1.25rem;
-        margin-left: 4px;
-    }
-
-    .carousel-time-title small {
-        font-size: 0.75rem;
-        opacity: 0.85;
-        margin-top: 2px;
-    }
-
-    /* Cuerpo de la Tarjeta */
-    .production-card {
-        background: #ffffff;
-        border: 2px solid #e2e8f0;
-        border-top: none;
-        border-radius: 0 0 14px 14px;
-        padding: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        transition: background-color 0.3s ease;
-    }
-
-    .production-card.meal-card {
-        background-color: #fff8e1;
-        border-color: #ffe082;
-    }
-
-    /* Filas con datos clave */
+    
     .card-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 1.05rem;
-        border-bottom: 1px solid #f1f5f9;
-        padding-bottom: 8px;
-    }
-
-    .card-label {
-        color: #64748b;
-        font-weight: 600;
-    }
-
-    .card-value {
-        color: #1e293b;
+        font-size: 0.95rem;
     }
 
     .card-value.font-bold {
-        font-weight: 800;
-        font-size: 1.3rem;
-    }
-
-    .card-value.real-value {
-        color: #0284c7;
-    }
-
-    /* Sección de Pérdidas (Lado a lado o apiladas según la pantalla) */
-    .card-row-losses {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 4px;
-    }
-
-    .loss-box {
-        padding: 10px;
-        border-radius: 10px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        box-sizing: border-box;
-    }
-
-    .loss-box.no-justified {
-        background-color: #fef2f2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
-    }
-
-    .loss-box.justified {
-        background-color: #f0fdf4;
-        color: #16a34a;
-        border: 1px solid #bbf7d0;
-    }
-
-    .loss-box.clickable {
-        cursor: pointer;
-        border-style: dashed;
-        transition: transform 0.15s ease, background-color 0.15s ease;
-    }
-
-    .loss-box.clickable:active {
-        transform: scale(0.97);
-        background-color: #dcfce7;
-    }
-
-    .loss-title {
-        font-size: 0.78rem;
-        font-weight: 700;
-        margin-bottom: 2px;
-    }
-
-    .loss-amount {
         font-size: 1.15rem;
-        font-weight: 800;
-    }
-
-    /* Observaciones y Botón adicional */
-    .card-row-obs {
-        background: #f8fafc;
-        border-left: 3px solid #94a3b8;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 0.9rem;
-    }
-
-    .card-row-obs p {
-        margin: 4px 0 0 0;
-        color: #334155;
-    }
-
-    .btn-meal-toggle {
-        width: 100%;
-        background: #f1f5f9;
-        border: 1px solid #cbd5e1;
-        color: #475569;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 4px;
-        transition: all 0.2s ease;
-    }
-
-    .btn-meal-toggle.active {
-        background: #ffedd5;
-        color: #c2410c;
-        border-color: #fdba74;
-    }
-
-    /* Ajuste específico para celulares con pantallas muy angostas (<= 360px) */
-    @media screen and (max-width: 360px) {
-        .card-row-losses {
-            grid-template-columns: 1fr; /* Pasa las pérdidas a una sola columna */
-        }
-        
-        .card-row {
-            font-size: 0.95rem;
-        }
-
-        .card-value.font-bold {
-            font-size: 1.15rem;
-        }
     }
 }

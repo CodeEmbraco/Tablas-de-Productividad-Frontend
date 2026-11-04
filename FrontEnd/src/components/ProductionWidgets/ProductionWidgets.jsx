@@ -8,7 +8,7 @@ import ZeroMal from '@assets/zero-status-color/zero-red.png';
 import ZeroYellow from '@assets/zero-status-color/zero-yellow.png';
 import '@styles/global.css'
 
-const ProductionWidgets = ({ percent, statusClass, real, goal, losses, enableAnimation }) => {
+const ProductionWidgets = ({ percent, statusClass, real, goal, losses, enableAnimation, isNative = false }) => {
     //console.log("statusClass: ", statusClass);
     const statusImage = statusClass === 'bueno' ? ZeroBien : (statusClass === 'medio' ? ZeroYellow : ZeroMal);
     const lossesCircleValue = ((losses - 480) / 480) * 100 + 100;
@@ -58,13 +58,15 @@ const ProductionWidgets = ({ percent, statusClass, real, goal, losses, enableAni
                 />
             </div> */}
 
-            <div style={{ textAlign: 'center' }}>
-                {/* {console.log("statusClass ==> ", statusClass)} */}
-                <img src={statusImage} alt="Status Indicator" style={{ height: '250px', transition: 'all 0.3s' }} />
-                <div style={{ marginTop: '5px', fontWeight: 'bold', color: statusClass === 'bueno' ? '#4caf50' : '#f44336' }}>
-                    {/* {statusClass === 'bueno' ? 'OBJETIVO CUMPLIDO' : 'BAJA EFICIENCIA'} */}
+            {!isNative && (
+                <div style={{ textAlign: 'center' }}>
+                    {/* {console.log("statusClass ==> ", statusClass)} */}
+                    <img src={statusImage} alt="Status Indicator" style={{ height: '250px', transition: 'all 0.3s' }} />
+                    <div style={{ marginTop: '5px', fontWeight: 'bold', color: statusClass === 'bueno' ? '#4caf50' : '#f44336' }}>
+                        {/* {statusClass === 'bueno' ? 'OBJETIVO CUMPLIDO' : 'BAJA EFICIENCIA'} */}
+                    </div>
                 </div>
-            </div>
+            )}
 
         </div>
     );

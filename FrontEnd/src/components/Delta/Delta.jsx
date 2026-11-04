@@ -28,11 +28,11 @@ const Delta = ({ total, accGoal, totalTurno, eficiencia, activeShifts = [], onTo
                 TOTAL DÍA
             </div>
             <div className='total-dia-container'>
-            <div style={{ flex: '1'}}>
-                <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: deltaColor, lineHeight: '1' }}>
+            <div className='total-dia-top-info' style={{ flex: '1'}}>
+                <div className='delta-main-number' style={{ fontSize: '2.2rem', fontWeight: 'bold', color: deltaColor, lineHeight: '1' }}>
                     {total} <span style={{ fontSize: '1rem', color: '#888', fontWeight: 'normal' }}>/ {parseInt(accGoal)}</span>
                 </div>
-                <div style={{ 
+                <div className='delta-pill-badge' style={{ 
                     fontSize: '1.3rem', 
                     fontWeight: 'bold', 
                     color: deltaColor, 
@@ -82,6 +82,68 @@ const Delta = ({ total, accGoal, totalTurno, eficiencia, activeShifts = [], onTo
             </div>
         </div>
         
+    );
+};
+
+export const ShiftDeltaCard = ({ shift, real, plan, eficiencia, perdidaJustificada = 0, perdidaNoJustificada = 0, onClick }) => {
+    const deltaValue = real - plan;
+    const deltaSign = deltaValue >= 0 ? "+" : "";
+
+    const deltaColor = plan === 0
+        ? '#4caf50'
+        : (eficiencia >= 100 ? '#4caf50' : (eficiencia >= 90 ? '#fbc02d' : '#f44336'));
+
+    const displayValue = Math.min(Math.max(eficiencia, 0), 100);
+
+    return (
+        <div
+            className="medidor-card shift-clickable-card"
+            style={{ border: `3px solid ${deltaColor}`, cursor: 'pointer' }}
+            onClick={onClick}
+            title="Pulsar para ver carrusel de producción por hora"
+        >
+            <div className="total-dia-title">
+                TURNO {shift && shift !== '0' ? shift : ''}
+            </div>
+            <div className="total-dia-container">
+                <div className="total-dia-top-info" style={{ flex: '1' }}>
+                    <div className="delta-main-number" style={{ fontSize: '2.2rem', fontWeight: 'bold', color: deltaColor, lineHeight: '1' }}>
+                        {real} <span style={{ fontSize: '1rem', color: '#888', fontWeight: 'normal' }}>/ {parseInt(plan)}</span>
+                    </div>
+                    <div className="delta-pill-badge" style={{
+                        fontSize: '1.3rem',
+                        fontWeight: 'bold',
+                        color: deltaColor,
+                        marginTop: '8px',
+                        backgroundColor: `${deltaColor}40`,
+                        padding: '2px 10px',
+                        borderRadius: '20px',
+                    }}>
+                        Delta: {deltaSign}{parseInt(deltaValue)}
+                    </div>
+                </div>
+                <div className="vertical-div"></div>
+                <div className="total-dia-right-breakdown" style={{ justifyContent: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 'bold', color: '#6e6e6e' }}>
+                            <span style={{ marginRight: '4px', color: '#16a34a' }}>●</span>
+                            Just.:
+                        </span>
+                        <strong style={{ marginLeft: '6px', color: '#333' }}>{perdidaJustificada}m</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 'bold', color: '#6e6e6e' }}>
+                            <span style={{ marginRight: '4px', color: '#dc2626' }}>●</span>
+                            No Just.:
+                        </span>
+                        <strong style={{ marginLeft: '6px', color: '#333' }}>{perdidaNoJustificada}m</strong>
+                    </div>
+                </div>
+            </div>
+            <div className="progressBar-container">
+                <div className="progressBar" style={{ width: `${displayValue}%`, backgroundColor: deltaColor }}></div>
+            </div>
+        </div>
     );
 };
 

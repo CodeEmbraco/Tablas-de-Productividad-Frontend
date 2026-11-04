@@ -1,0 +1,214 @@
+.mobile-login-screen {
+    min-height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(160deg, #009b4a 0%, #007a3a 45%, #005b62 100%);
+    font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-sizing: border-box;
+    padding: env(safe-area-inset-top, 16px) 20px env(safe-area-inset-bottom, 16px) 20px;
+}
+
+.mobile-login-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 28px;
+    text-align: center;
+    color: #ffffff;
+}
+
+.mobile-login-logo {
+    max-height: 54px;
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+}
+
+.mobile-login-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+
+.mobile-login-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+    box-sizing: border-box;
+    animation: mobileLoginFadeIn 0.25s ease-out;
+}
+
+@keyframes mobileLoginFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mobile-login-card-header {
+    text-align: center;
+    margin-bottom: 22px;
+}
+
+.mobile-login-card-header h1 {
+    margin: 0 0 6px 0;
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.mobile-login-card-header p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #64748b;
+}
+
+.mobile-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mobile-login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mobile-login-field label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.mobile-login-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mobile-login-input-icon {
+    position: absolute;
+    left: 14px;
+    color: #64748b;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+}
+
+.mobile-login-input-wrapper input {
+    width: 100%;
+    padding: 13px 42px 13px 42px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+    background-color: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.mobile-login-input-wrapper input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.mobile-login-input-wrapper input:focus {
+    border-color: #009b4a;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(0, 155, 74, 0.14);
+}
+
+.mobile-login-eye-btn {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #64748b;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-login-eye-btn:active {
+    background-color: #f1f5f9;
+}
+
+.mobile-login-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 10px;
+}
+
+.mobile-login-submit {
+    margin-top: 4px;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background-color: #009b4a;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 16px rgba(0, 155, 74, 0.3);
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-login-submit:hover:not(:disabled) {
+    background-color: #00823e;
+}
+
+.mobile-login-submit:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.mobile-login-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.mobile-login-footer {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.78rem;
+    padding-bottom: 8px;
+}
+

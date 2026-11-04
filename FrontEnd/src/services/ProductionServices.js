@@ -2,28 +2,34 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:3001/api',
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d'
+    }
 });
+
+// Caché en memoria para la configuración de líneas (Nombre, Supervisores y Líderes)
+const linesConfigCache = new Map();
 
 const productionService = {
     //TABLA DE PRODUCTIVIDAD
     getDailyProduction: async (lineID, date) => {
         const params = { fecha: date };
-        const response = await api.get(`api/${lineID}/production`, { params });
+        const response = await api.get(`${lineID}/production`, { params });
         return response.data;
     },
 
     //DASHBOARD
     getDashboardProduction: async (date) => {
         const params = { fecha: date };
-        const response = await api.get(`api/dashboard/production`, { params });
+        const response = await api.get(`dashboard/production`, { params });
         return response.data;
     },
 
     //PERDIDAS
     syncParentLoss: async (linea, fecha, hora, minutosCalculados, idSup, idLider) => {
         //console.log("debug: ",linea," | ", fecha," | ", hora," | ", minutosCalculados," | ", idSup," | ", idLider);
-        const response = await api.post(`api/losses/sync-parent`, {
+        const response = await api.post(`losses/sync-parent`, {
             linea,
             fecha,
             hora,
@@ -35,12 +41,12 @@ const productionService = {
     },
 
     addLossDetail: async (idPerdida, detailData) => {
-        const response = await api.post(`api/losses/${idPerdida}/details`, detailData);
+        const response = await api.post(`losses/${idPerdida}/details`, detailData);
         return response.data;
     },
 
     deleteLossDetail: async (idDetalle) => {
-        const response = await api.delete(`api/losses/details/${idDetalle}`);
+        const response = await api.delete(`losses/details/${idDetalle}`);
         return response.data;
     },
 
@@ -48,13 +54,13 @@ const productionService = {
     getShiftsStatus: async (lineId, fecha, lineNo = null) => {
         const params = { fecha: fecha, lineId: lineId };
         if (lineNo) params.lineNo = lineNo;
-        const response = await api.get(`api/utils/shift-status`, { params });
+        const response = await api.get(`shift/shift-status`, { params });
         return response.data;
     },
 
     shiftToggleStatus: async (lineId, fecha, turno, nuevoEstado, lineNo = null) => {
         try {
-            const response = await api.post('api/utils/shift-toggle', {
+            const response = await api.post('shift/shift-toggle', {
                 fecha: fecha,
                 lineId: lineId,
                 turno: turno,
@@ -70,9 +76,20 @@ const productionService = {
 
     //CONFIGURACION DE LINEAS
     getLinesConfig: async (lineId = null) => {
+        const cacheKey = lineId || '__ALL__';
+        if (linesConfigCache.has(cacheKey)) {
+            return linesConfigCache.get(cacheKey);
+        }
         const params = lineId ? { lineId: lineId } : {};
-        const response = await api.get(`api/lines/lines-config`, { params });
+        const response = await api.get(`lines/lines-config`, { params });
+        if (response.data) {
+            linesConfigCache.set(cacheKey, response.data);
+        }
         return response.data;
+    },
+
+    getCachedLineConfig: (lineId) => {
+        return linesConfigCache.get(lineId || '__ALL__') || null;
     },
 
     //METAS
@@ -80,7 +97,7 @@ const productionService = {
         try {
             const params = {};
             if (lineNo) params.lineNo = lineNo;
-            const response = await api.post(`api/utils/default-goal-update-shift`, {
+            const response = await api.post(`goal/default-goal-update-shift`, {
                 lineId: lineId,
                 turno: turno,
                 metaDefault: metaDefault
@@ -97,7 +114,7 @@ const productionService = {
         try {
             const params = {};
             if (lineNo) params.lineNo = lineNo;
-            const response = await api.post(`api/utils/default-goal-update-timeslot`, {
+            const response = await api.post(`goal/default-goal-update-timeslot`, {
                 lineId: lineId,
                 horaSlot: horaSlot,
                 metaDefault: metaDefault
@@ -114,7 +131,7 @@ const productionService = {
         try {
             const params = {};
             if (lineNo) params.lineNo = lineNo;
-            const response = await api.post(`api/utils/custom-goal-update`, {
+            const response = await api.post(`goal/custom-goal-update`, {
                 lineId: lineId,
                 fecha: fecha,
                 turno: turno,
@@ -134,7 +151,21 @@ const productionService = {
     getLineEffectiveGoalDay: async (lineId, date, lineNo = null) => {
         const params = { fecha: date, lineId: lineId };
         if (lineNo) params.lineNo = lineNo;
-        const response = await api.get(`api/utils/line-effective-goal-day`, { params });
+        const response = await api.get(`goal/line-effective-goal-day`, { params });
+        return response.data;
+    },
+
+    //AUTENTICACIÓN (LOGIN CON NÓMINA)
+    login: async (usuario, password) => {
+        const response = await api.post(`auth/login`, {
+            usuario: String(usuario).trim(),
+            password
+        });
+        return response.data;
+    },
+
+    getUserByNomina: async (usuario) => {
+        const response = await api.get(`auth/user/${encodeURIComponent(String(usuario).trim())}`);
         return response.data;
     }
 };
