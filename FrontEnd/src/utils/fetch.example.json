@@ -1,0 +1,336 @@
+{
+    "produccion": {
+        "totalDia": {
+            "produccion": 1374,
+            "meta": 3670,
+            "metaEfectiva": 1370,
+            "eficiencia": 37.44
+        },
+        "turnos": {
+            "T1": {
+                "produccion": 1176,
+                "meta": 1200,
+                "metaEfectiva": 1200,
+                "eficiencia": 98
+            },
+            "T2": {
+                "produccion": 198,
+                "meta": 1530,
+                "metaEfectiva": 170,
+                "eficiencia": 12.94
+            },
+            "T3": {
+                "produccion": 0,
+                "meta": 940,
+                "metaEfectiva": 0,
+                "eficiencia": 0
+            }
+        },
+        "porHora": [
+            {
+                "Hora": 6,
+                "ProduccionTotal": 172,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 107.5,
+                "Perdidas": {
+                    "MinutosCalculados": 0,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 7,
+                "ProduccionTotal": 170,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 106.25,
+                "Perdidas": {
+                    "MinutosCalculados": 0,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 8,
+                "ProduccionTotal": 170,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 106.25,
+                "Perdidas": {
+                    "MinutosCalculados": 0,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 9,
+                "ProduccionTotal": 157,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 98.13,
+                "Perdidas": {
+                    "MinutosCalculados": 1,
+                    "RegistroDB": {
+                        "IdPerdida": 3351,
+                        "Linea": "insinkerator1",
+                        "Hora": "09:00 - 10:00",
+                        "Fecha": "2026-10-28T00:00:00.000Z",
+                        "PerdidaCalculada": 1,
+                        "PerdidaNoJustificada": 0,
+                        "PerdidaJustificada": 1,
+                        "Supervisor": 1,
+                        "Lider": 14,
+                        "PerdidaDetalle": [
+                            {
+                                "IdDetalle": 65881,
+                                "IdPerdida": 3351,
+                                "Motivo": "A1",
+                                "Maquina": null,
+                                "Detalle": "ajuste de pacotera",
+                                "Minutos": 1
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "Hora": 10,
+                "ProduccionTotal": 84,
+                "Modelos": "80758A",
+                "MetaEfectiva": 80,
+                "Eficiencia": 105,
+                "Perdidas": {
+                    "MinutosCalculados": 0,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 11,
+                "ProduccionTotal": 147,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 91.88,
+                "Perdidas": {
+                    "MinutosCalculados": 5,
+                    "RegistroDB": {
+                        "IdPerdida": 3353,
+                        "Linea": "insinkerator1",
+                        "Hora": "11:00 - 12:00",
+                        "Fecha": "2026-10-28T00:00:00.000Z",
+                        "PerdidaCalculada": 5,
+                        "PerdidaNoJustificada": 0,
+                        "PerdidaJustificada": 5,
+                        "Supervisor": 1,
+                        "Lider": 14,
+                        "PerdidaDetalle": [
+                            {
+                                "IdDetalle": 66062,
+                                "IdPerdida": 3353,
+                                "Motivo": "G1",
+                                "Maquina": null,
+                                "Detalle": "ajuste de camara de pacote ",
+                                "Minutos": 5
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "Hora": 12,
+                "ProduccionTotal": 167,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 104.38,
+                "Perdidas": {
+                    "MinutosCalculados": 0,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 13,
+                "ProduccionTotal": 109,
+                "Modelos": "80758A",
+                "MetaEfectiva": 160,
+                "Eficiencia": 68.13,
+                "Perdidas": {
+                    "MinutosCalculados": 19,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 14,
+                "ProduccionTotal": 164,
+                "Modelos": "80758A",
+                "MetaEfectiva": 170,
+                "Eficiencia": 96.47,
+                "Perdidas": {
+                    "MinutosCalculados": 2,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 15,
+                "ProduccionTotal": 34,
+                "Modelos": "80758A",
+                "MetaEfectiva": 170,
+                "Eficiencia": 20,
+                "Perdidas": {
+                    "MinutosCalculados": 48,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 16,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 17,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 18,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 19,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 20,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 21,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 22,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 23,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 170,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 0,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 140,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 1,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 140,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 2,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 70,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 3,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 140,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 4,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 140,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            },
+            {
+                "Hora": 5,
+                "ProduccionTotal": 0,
+                "Modelos": "Sin Información",
+                "MetaEfectiva": 140,
+                "Eficiencia": 0,
+                "Perdidas": {
+                    "MinutosCalculados": 60,
+                    "RegistroDB": null
+                }
+            }
+        ]
+    }
+}

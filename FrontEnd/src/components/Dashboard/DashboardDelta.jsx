@@ -1,6 +1,4 @@
 import React from 'react';
-import zero from '@assets/zeroproductividad.png';
-import { meta } from '@eslint/js';
 
 const Delta = ({
     total,
@@ -65,7 +63,7 @@ const Delta = ({
                                 transition: 'font-size 0.4s ease'
                             }}>
                                 {/* Si por alguna razón no calcula la meta acumulada, pone 0 y asi evitamos meter ruido con la meta completa  */}
-                                /{parseInt(accGoal || 0)} 
+                                /{parseInt(accGoal || 0)}
                             </span>
                         </div>
                         <p style={{ fontWeight: 'bolder', fontSize: isLarge ? '1.2rem' : '1rem', margin: '0px' }}>

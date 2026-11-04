@@ -48,13 +48,13 @@ const productionService = {
     getShiftsStatus: async (lineId, fecha, lineNo = null) => {
         const params = { fecha: fecha, lineId: lineId };
         if (lineNo) params.lineNo = lineNo;
-        const response = await api.get(`api/utils/shift-status`, { params });
+        const response = await api.get(`api/shifts/shift-status`, { params });
         return response.data;
     },
 
     shiftToggleStatus: async (lineId, fecha, turno, nuevoEstado, lineNo = null) => {
         try {
-            const response = await api.post('api/utils/shift-toggle', {
+            const response = await api.post('api/shifts/shift-toggle', {
                 fecha: fecha,
                 lineId: lineId,
                 turno: turno,
@@ -80,7 +80,7 @@ const productionService = {
         try {
             const params = {};
             if (lineNo) params.lineNo = lineNo;
-            const response = await api.post(`api/utils/default-goal-update-shift`, {
+            const response = await api.post(`api/goals/default-goal-update-shift`, {
                 lineId: lineId,
                 turno: turno,
                 metaDefault: metaDefault
@@ -97,7 +97,7 @@ const productionService = {
         try {
             const params = {};
             if (lineNo) params.lineNo = lineNo;
-            const response = await api.post(`api/utils/default-goal-update-timeslot`, {
+            const response = await api.post(`api/goals/default-goal-update-timeslot`, {
                 lineId: lineId,
                 horaSlot: horaSlot,
                 metaDefault: metaDefault
@@ -114,7 +114,7 @@ const productionService = {
         try {
             const params = {};
             if (lineNo) params.lineNo = lineNo;
-            const response = await api.post(`api/utils/custom-goal-update`, {
+            const response = await api.post(`api/goals/custom-goal-update`, {
                 lineId: lineId,
                 fecha: fecha,
                 turno: turno,
@@ -134,7 +134,7 @@ const productionService = {
     getLineEffectiveGoalDay: async (lineId, date, lineNo = null) => {
         const params = { fecha: date, lineId: lineId };
         if (lineNo) params.lineNo = lineNo;
-        const response = await api.get(`api/utils/line-effective-goal-day`, { params });
+        const response = await api.get(`api/goals/line-effective-goal-day`, { params });
         return response.data;
     }
 };

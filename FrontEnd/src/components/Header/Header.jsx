@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Menu } from "lucide-react";
 import './Header.css';
-import logoNidec from '@assets/nidecacim_white.png';
-import Zero from '@assets/zeroproductividad.png';
+import logoNidec from '@assets/nidecacim_white.png';;
 import Sidebar from "../Sidebar/sidebar";
 
 const Header = ({ line }) => {
@@ -15,7 +14,6 @@ const Header = ({ line }) => {
                 line ? (
                     <>
                         <h2 className="tituloPrincipal">TABLA DE PRODUCTIVIDAD {line}</h2>
-                        {/* <img src={Zero} alt="Zero Productividad" className="logoZero" /> */}
                     </>
                 ) : (
                     <h2 className="tituloPrincipal">LINEAS DE PRODUCCION: GA COLD MX</h2>

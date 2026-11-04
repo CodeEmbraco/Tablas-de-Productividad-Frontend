@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { horaSlotFormatter, getFormattedDate } from '@utils/dateUtils';
+import { getFormattedDate } from '@utils/dateUtils';
 import { construirEsqueletoTabla } from '@utils/dataUtils';
+
+const getStatus = (eficiencia) => (eficiencia >= 100 ? 'bueno' : eficiencia >= 90 ? 'medio' : 'mal');
 
 export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions) => {
     const [data, setData] = useState({
@@ -10,6 +12,8 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
         shiftsStatus: [],
         totalTurno: 0,
         metaTurnoDB: 0,
+        turnMetrics: { metaAcumulada: 0, eficiencia: 0, status: 'mal' },
+        dayMetrics: { metaTotalAcumulada: 0, eficiencia: 0, status: 'mal' },
         loading: true,
         error: null
     });
@@ -82,25 +86,44 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
             ])
 
             const { totalDia, turnos, porHora } = megaData.produccion;
-            const currentShiftData = turnos[`T${turno}`] || { produccion: 0, meta: 0, eficiencia: 0 };
+            const currentShiftData = turnos[`T${turno}`] || { produccion: 0, meta: 0, metaEfectiva: 0, eficiencia: 0 };
 
             const tableItems = construirEsqueletoTabla(fecha, turno, porHora);
 
             const totalDelta = [
-                { turno: 1, contador: turnos.T1.produccion, MetaEfectivaTurno: turnos.T1.meta },
-                { turno: 2, contador: turnos.T2.produccion, MetaEfectivaTurno: turnos.T2.meta },
-                { turno: 3, contador: turnos.T3.produccion, MetaEfectivaTurno: turnos.T3.meta }
+                { turno: 1, contador: turnos.T1.produccion, MetaEfectivaTurno: turnos.T1.metaEfectiva },
+                { turno: 2, contador: turnos.T2.produccion, MetaEfectivaTurno: turnos.T2.metaEfectiva },
+                { turno: 3, contador: turnos.T3.produccion, MetaEfectivaTurno: turnos.T3.metaEfectiva }
             ];
+
+            const realTurno = Number(currentShiftData.produccion) || 0;
+            const metaAcumuladaTurno = Number(currentShiftData.metaEfectiva) || 0;
+            const efTurno = metaAcumuladaTurno > 0 ? Math.round((realTurno / metaAcumuladaTurno) * 100) : 0;
+
+            const realDia = Number(totalDia.produccion) || 0;
+            const metaAcumuladaDia = Number(totalDia.metaEfectiva) || 0;
+            const efDia = metaAcumuladaDia > 0 ? Math.round((realDia / metaAcumuladaDia) * 100) : 0;
 
             setData(prev => ({
                 ...prev,
                 tableItems,
-                totalDia: totalDia.produccion,
-                totalTurno: currentShiftData.produccion,
+                totalDia: realDia,
+                totalTurno: realTurno,
                 metaTurnoDB: currentShiftData.meta,
                 totalDelta: totalDelta,
                 shiftsStatus: shiftsStatus || [],
-                loading: false
+                turnMetrics: {
+                    metaAcumulada: metaAcumuladaTurno,
+                    eficiencia: efTurno,
+                    status: getStatus(efTurno)
+                },
+                dayMetrics: {
+                    metaTotalAcumulada: metaAcumuladaDia,
+                    eficiencia: efDia,
+                    status: getStatus(efDia)
+                },
+                loading: false,
+                error: null
             }));
             //console.log("tableItems",tableItems);
             await syncOfflineQueue();
@@ -135,5 +158,5 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
         }
     }, [fetchAll, fecha, turno]);
 
-    return { ...data, toggleShiftDB, fetchAll, saveLossRealTime, deleteLossRealTime };
+    return { ...data, isSaving, toggleShiftDB, fetchAll, saveLossRealTime, deleteLossRealTime };
 };

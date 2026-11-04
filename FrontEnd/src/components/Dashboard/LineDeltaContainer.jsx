@@ -1,6 +1,5 @@
 import React from 'react';
 import DashboardDelta from './DashboardDelta';
-import zero from '@assets/zeroproductividad.png';
 
 const LineDeltaContainer = ({ lineConfig, isLarge, isAdmin, onAccessDenied, onToggleShift }) => {
     if (!lineConfig || !lineConfig.datosAPI) return null;

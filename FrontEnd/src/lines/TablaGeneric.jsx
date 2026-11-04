@@ -4,7 +4,6 @@ import { useParams } from 'react-router-dom';
 
 // Context & Hooks
 import { useProduction } from '@context/ProductionContext';
-import { useProductionMetrics } from '@hooks/useProductionMetrics';
 import { useProductionData } from '@hooks/useProductionData';
 import { useLocalLineConfig } from "@hooks/useLocalLineConfig.js";
 import { useAdmin } from '@hooks/useAdmin';
@@ -97,6 +96,8 @@ const TablaGeneric = ({ lineConfigKey }) => {
         totalTurno,
         totalDelta,
         shiftsStatus,
+        turnMetrics,
+        dayMetrics,
         loading,
         error,
         toggleShiftDB,
@@ -105,22 +106,6 @@ const TablaGeneric = ({ lineConfigKey }) => {
         saveLossRealTime,
         fetchAll
     } = useProductionData(lineConfig.id,selectedDate, selectedShift, lineConfig?.defaultMeta, apiConfig);
-
-    // console.log(tableItems);
-    // console.log(totalDelta);
-
-    const metrics = useProductionMetrics(
-        tableItems,
-        totalDelta,
-        shiftsStatus,
-        totalTurno,
-        totalDia,
-        selectedDate,
-        selectedShift
-    );
-
-    const turnMetrics = metrics.turno;
-    const dayMetrics = metrics.dia;
 
     // Estados de Interfaz (UI)
     const [isManualOpen, setIsManualOpen] = useState(false);
