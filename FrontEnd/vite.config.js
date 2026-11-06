@@ -17,6 +17,16 @@ export default defineConfig({
       '@services': path.resolve(__dirname, './src/services'),
     },
   },
+  server: {
+    proxy: {
+      '/api-embraco': {
+        target: 'https://api.embraco.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (p) => p.replace(/^\/api-embraco/, ''),
+      },
+    },
+  },
   plugins: [react()],
   base: '/',
 })

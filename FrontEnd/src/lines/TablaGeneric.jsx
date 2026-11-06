@@ -53,7 +53,7 @@ import '@styles/global.css';
  */
 const TablaGeneric = ({ lineConfigKey }) => {
 
-    const isNative = Capacitor.isNativePlatform();
+    const isNative = !Capacitor.isNativePlatform();
 
     const { selectedDate, selectedShift, setSelectedDate, setSelectedShift } = useProduction();
 

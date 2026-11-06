@@ -1,11 +1,86 @@
 import axios from 'axios';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
+
+const rawBaseURL = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:3001/api';
+const apiKey = import.meta.env.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d';
+const isNative = Capacitor.isNativePlatform();
+
+// En modo desarrollo web (navegador), si apunta al gateway api.embraco.com usamos el proxy de Vite
+// para evitar que el navegador envíe preflight OPTIONS sin el header 'apikey' (que da 401 + CORS error).
+const resolvedBaseURL =
+    !isNative && import.meta.env.DEV && rawBaseURL.startsWith('https://api.embraco.com')
+        ? rawBaseURL.replace('https://api.embraco.com', '/api-embraco')
+        : rawBaseURL;
+
+/**
+ * Adaptador nativo para Android/iOS usando CapacitorHttp directamente.
+ * Evita que el WebView o librerías como Eruda intercepten XMLHttpRequest y disparen
+ * peticiones preflight OPTIONS bloqueadas por CORS/401 en el API Gateway.
+ */
+const capacitorNativeAdapter = async (config) => {
+    const base = (config.baseURL || '').replace(/\/+$/, '');
+    const relativeUrl = (config.url || '').replace(/^\/+/, '');
+    const fullUrl = relativeUrl ? `${base}/${relativeUrl}` : base;
+
+    let parsedData = config.data;
+    if (typeof parsedData === 'string') {
+        try {
+            parsedData = JSON.parse(parsedData);
+        } catch {
+            // mantener string si no es JSON válido
+        }
+    }
+
+    const stringParams = {};
+    if (config.params && typeof config.params === 'object') {
+        Object.entries(config.params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) {
+                stringParams[k] = String(v);
+            }
+        });
+    }
+
+    const response = await CapacitorHttp.request({
+        url: fullUrl,
+        method: (config.method || 'GET').toUpperCase(),
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': apiKey,
+            ...(config.headers ? Object.fromEntries(
+                Object.entries(config.headers).filter(([_, v]) => typeof v === 'string')
+            ) : {})
+        },
+        params: stringParams,
+        data: parsedData
+    });
+
+    if (response.status >= 200 && response.status < 300) {
+        return {
+            data: response.data,
+            status: response.status,
+            statusText: String(response.status),
+            headers: response.headers,
+            config
+        };
+    }
+
+    const error = new Error(`Request failed with status code ${response.status}`);
+    error.config = config;
+    error.response = {
+        data: response.data,
+        status: response.status,
+        headers: response.headers
+    };
+    throw error;
+};
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:3001/api',
+    baseURL: resolvedBaseURL,
     headers: {
         'Content-Type': 'application/json',
-        'apikey': import.meta.env.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d'
-    }
+        'apikey': apiKey
+    },
+    ...(isNative ? { adapter: capacitorNativeAdapter } : {})
 });
 
 // Caché en memoria para la configuración de líneas (Nombre, Supervisores y Líderes)
