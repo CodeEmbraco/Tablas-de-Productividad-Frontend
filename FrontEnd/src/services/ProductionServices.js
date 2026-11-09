@@ -1,104 +1,107 @@
 import axios from 'axios';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
-
-const rawBaseURL = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:3001/api';
-const apiKey = import.meta.env.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d';
-const isNative = Capacitor.isNativePlatform();
-
-// En modo desarrollo web (navegador), si apunta al gateway api.embraco.com usamos el proxy de Vite
-// para evitar que el navegador envíe preflight OPTIONS sin el header 'apikey' (que da 401 + CORS error).
-const resolvedBaseURL =
-    !isNative && import.meta.env.DEV && rawBaseURL.startsWith('https://api.embraco.com')
-        ? rawBaseURL.replace('https://api.embraco.com', '/api-embraco')
-        : rawBaseURL;
-
-/**
- * Adaptador nativo para Android/iOS usando CapacitorHttp directamente.
- * Evita que el WebView o librerías como Eruda intercepten XMLHttpRequest y disparen
- * peticiones preflight OPTIONS bloqueadas por CORS/401 en el API Gateway.
- */
-const capacitorNativeAdapter = async (config) => {
-    const base = (config.baseURL || '').replace(/\/+$/, '');
-    const relativeUrl = (config.url || '').replace(/^\/+/, '');
-    const fullUrl = relativeUrl ? `${base}/${relativeUrl}` : base;
-
-    let parsedData = config.data;
-    if (typeof parsedData === 'string') {
-        try {
-            parsedData = JSON.parse(parsedData);
-        } catch {
-            // mantener string si no es JSON válido
-        }
-    }
-
-    const stringParams = {};
-    if (config.params && typeof config.params === 'object') {
-        Object.entries(config.params).forEach(([k, v]) => {
-            if (v !== undefined && v !== null) {
-                stringParams[k] = String(v);
-            }
-        });
-    }
-
-    const response = await CapacitorHttp.request({
-        url: fullUrl,
-        method: (config.method || 'GET').toUpperCase(),
-        headers: {
-            'Content-Type': 'application/json',
-            'apikey': apiKey,
-            ...(config.headers ? Object.fromEntries(
-                Object.entries(config.headers).filter(([_, v]) => typeof v === 'string')
-            ) : {})
-        },
-        params: stringParams,
-        data: parsedData
-    });
-
-    if (response.status >= 200 && response.status < 300) {
-        return {
-            data: response.data,
-            status: response.status,
-            statusText: String(response.status),
-            headers: response.headers,
-            config
-        };
-    }
-
-    const error = new Error(`Request failed with status code ${response.status}`);
-    error.config = config;
-    error.response = {
-        data: response.data,
-        status: response.status,
-        headers: response.headers
-    };
-    throw error;
-};
 
 const api = axios.create({
-    baseURL: resolvedBaseURL,
+    baseURL: import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:3001/api',
     headers: {
         'Content-Type': 'application/json',
-        'apikey': apiKey
-    },
-    ...(isNative ? { adapter: capacitorNativeAdapter } : {})
+        'apikey': import.meta.env.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d'
+    }
 });
 
 // Caché en memoria para la configuración de líneas (Nombre, Supervisores y Líderes)
 const linesConfigCache = new Map();
 
+/**
+ * El Gateway Nginx de api.embraco.com tiene un balanceo donde ~1 de cada N conexiones
+ * cae en un upstream que espera 60s (proxy_connect_timeout = 60000ms) antes de hacer failover.
+ * Con Request Hedging, si una lectura tarda más de 2.5s sin responder, disparamos una petición
+ * paralela de respaldo (con query param único para evitar bloqueo de caché del WebView) que
+ * entra al nodo activo y responde en ~900ms en lugar de esperar 60.9 segundos.
+ */
+const HEDGE_DELAY_1_MS = 2500;
+const HEDGE_DELAY_2_MS = 5500;
+
+const hedgedGet = async (url, params = {}) => {
+    const c1 = new AbortController();
+    const c2 = new AbortController();
+    const c3 = new AbortController();
+    let timer1 = null;
+    let timer2 = null;
+
+    const p1 = api.get(url, { params, signal: c1.signal })
+        .then((res) => ({ winner: 1, data: res.data }));
+
+    const p2 = new Promise((resolve, reject) => {
+        timer1 = setTimeout(() => {
+            api.get(url, {
+                params: { ...params, _h: `${Date.now()}_1` },
+                signal: c2.signal
+            }).then((res) => resolve({ winner: 2, data: res.data }), reject);
+        }, HEDGE_DELAY_1_MS);
+    });
+
+    const p3 = new Promise((resolve, reject) => {
+        timer2 = setTimeout(() => {
+            api.get(url, {
+                params: { ...params, _h: `${Date.now()}_2` },
+                signal: c3.signal
+            }).then((res) => resolve({ winner: 3, data: res.data }), reject);
+        }, HEDGE_DELAY_2_MS);
+    });
+
+    try {
+        const result = await Promise.any([p1, p2, p3]);
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        if (result.winner !== 1) c1.abort();
+        if (result.winner !== 2) c2.abort();
+        if (result.winner !== 3) c3.abort();
+        return result.data;
+    } catch (err) {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        throw err?.errors?.[0] || err;
+    }
+};
+
+const hedgedPostReadOnly = async (url, body = {}) => {
+    const c1 = new AbortController();
+    const c2 = new AbortController();
+    let timer1 = null;
+
+    const p1 = api.post(url, body, { signal: c1.signal })
+        .then((res) => ({ winner: 1, data: res.data }));
+
+    const p2 = new Promise((resolve, reject) => {
+        timer1 = setTimeout(() => {
+            api.post(url, body, {
+                params: { _h: `${Date.now()}_1` },
+                signal: c2.signal
+            }).then((res) => resolve({ winner: 2, data: res.data }), reject);
+        }, HEDGE_DELAY_1_MS);
+    });
+
+    try {
+        const result = await Promise.any([p1, p2]);
+        clearTimeout(timer1);
+        if (result.winner !== 1) c1.abort();
+        if (result.winner !== 2) c2.abort();
+        return result.data;
+    } catch (err) {
+        clearTimeout(timer1);
+        throw err?.errors?.[0] || err;
+    }
+};
+
 const productionService = {
     //TABLA DE PRODUCTIVIDAD
     getDailyProduction: async (lineID, date) => {
-        const params = { fecha: date };
-        const response = await api.get(`${lineID}/production`, { params });
-        return response.data;
+        return hedgedGet(`${lineID}/production`, { fecha: date });
     },
 
     //DASHBOARD
     getDashboardProduction: async (date) => {
-        const params = { fecha: date };
-        const response = await api.get(`dashboard/production`, { params });
-        return response.data;
+        return hedgedGet(`dashboard/production`, { fecha: date });
     },
 
     //PERDIDAS
@@ -129,8 +132,7 @@ const productionService = {
     getShiftsStatus: async (lineId, fecha, lineNo = null) => {
         const params = { fecha: fecha, lineId: lineId };
         if (lineNo) params.lineNo = lineNo;
-        const response = await api.get(`shift/shift-status`, { params });
-        return response.data;
+        return hedgedGet(`shift/shift-status`, params);
     },
 
     shiftToggleStatus: async (lineId, fecha, turno, nuevoEstado, lineNo = null) => {
@@ -156,11 +158,11 @@ const productionService = {
             return linesConfigCache.get(cacheKey);
         }
         const params = lineId ? { lineId: lineId } : {};
-        const response = await api.get(`lines/lines-config`, { params });
-        if (response.data) {
-            linesConfigCache.set(cacheKey, response.data);
+        const data = await hedgedGet(`lines/lines-config`, params);
+        if (data) {
+            linesConfigCache.set(cacheKey, data);
         }
-        return response.data;
+        return data;
     },
 
     getCachedLineConfig: (lineId) => {
@@ -226,22 +228,19 @@ const productionService = {
     getLineEffectiveGoalDay: async (lineId, date, lineNo = null) => {
         const params = { fecha: date, lineId: lineId };
         if (lineNo) params.lineNo = lineNo;
-        const response = await api.get(`goal/line-effective-goal-day`, { params });
-        return response.data;
+        return hedgedGet(`goal/line-effective-goal-day`, params);
     },
 
     //AUTENTICACIÓN (LOGIN CON NÓMINA)
     login: async (usuario, password) => {
-        const response = await api.post(`auth/login`, {
+        return hedgedPostReadOnly(`auth/login`, {
             usuario: String(usuario).trim(),
             password
         });
-        return response.data;
     },
 
     getUserByNomina: async (usuario) => {
-        const response = await api.get(`auth/user/${encodeURIComponent(String(usuario).trim())}`);
-        return response.data;
+        return hedgedGet(`auth/user/${encodeURIComponent(String(usuario).trim())}`);
     }
 };
 

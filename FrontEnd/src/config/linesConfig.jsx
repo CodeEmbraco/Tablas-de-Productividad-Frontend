@@ -16,36 +16,43 @@ import thermoImg from '@assets/materials/thermo_v2.png';
 export const LINES_CONFIG = {
     cdu: {
         id: "cdu",
+        name: "CDU",
         defaultMeta: 24,
         imgURL: cduImg
     },
     thermo: {
         id: "thermo",
+        name: "THERMOFISHER",
         defaultMeta: 3,
         imgURL: thermoImg
     },
     electronics: {
         id: "electronics",
+        name: "ELECTRONICS",
         defaultMeta: 180,
         imgURL: electronicsImg
     },
     ecmfan: {
         id: "ecmfan",
+        name: "ECM FAN",
         defaultMeta: 60,
         imgURL: ecmfanImg
     },
     insinkerator1:{
         id: "insinkerator1",
+        name: "INSINKERATOR L1",
         defaultMeta: 140,
         imgURL: insinkeratorImg
     },
     insinkerator2:{
         id: "insinkerator2",
+        name: "INSINKERATOR L2",
         defaultMeta: 140,
         imgURL: insinkeratorImg
     },
     preensamble: {
         id: "preensamble",
+        name: "PRE-ENSAMBLE",
         defaultMeta: 350,
         imgURL: preensambleImg
     }

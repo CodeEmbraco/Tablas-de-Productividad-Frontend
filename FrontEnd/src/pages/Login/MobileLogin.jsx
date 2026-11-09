@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { User, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import productionService from "@services/ProductionServices";
-import { preloadProductionOnLogin } from "@hooks/useProductionData";
 import logoNidecWhite from "@assets/nidecacim_white.png";
 import "./MobileLogin.css";
 
@@ -11,11 +10,6 @@ const MobileLogin = ({ onLoginSuccess }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-
-    // Pre-carga silenciosa de las líneas en caché mientras el usuario escribe sus credenciales
-    useEffect(() => {
-        preloadProductionOnLogin();
-    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

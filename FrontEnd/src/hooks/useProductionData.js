@@ -1,20 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getFormattedDate } from '@utils/dateUtils';
 import { construirEsqueletoTabla } from '@utils/dataUtils';
-import { LINES_CONFIG } from '@config/linesConfig';
 import productionService from '@services/ProductionServices';
 
 // Caché en memoria por (línea + fecha) para mostrar datos al instante al cambiar de línea o turno
 const productionDataCache = new Map();
 const shiftStatusLoadedKeys = new Set();
-const prefetchedDates = new Set();
 
-// Promesas en vuelo para evitar peticiones duplicadas si el usuario entra mientras ya se está pre-cargando
+// Promesas en vuelo para evitar peticiones duplicadas concurrentes
 const inFlightProductionRequests = new Map();
 const inFlightShiftRequests = new Map();
 
-const CACHE_FRESH_TTL_MS = 15000; // 15 segundos de frescura
-const SWITCH_DEBOUNCE_MS = 400;   // 400 ms de espera al cambiar rápido de línea
+const CACHE_FRESH_TTL_MS = 20000; // 20 segundos de frescura
+const SWITCH_DEBOUNCE_MS = 100;   // 100 ms al cambiar rápido entre líneas
 
 const fetchProductionDeduped = (lineId, fecha, customFetcher = null) => {
     const key = `${lineId}_${fecha}`;
@@ -67,69 +65,6 @@ const buildStateFromRaw = (fecha, turno, megaData, shiftsStatus) => {
     };
 };
 
-// Pre-carga silenciosa y secuencial en segundo plano de las demás líneas para la fecha actual
-const prefetchOtherLinesInBackground = async (currentLineId, fecha) => {
-    if (prefetchedDates.has(fecha)) return;
-    prefetchedDates.add(fecha);
-
-    const allLineIds = Object.values(LINES_CONFIG).map(cfg => cfg.id);
-    for (const lineId of allLineIds) {
-        if (lineId === currentLineId) continue;
-        const key = `${lineId}_${fecha}`;
-
-        // Pre-cargar nombre/personal de la línea en caché
-        productionService.getLinesConfig(lineId).catch(() => {});
-
-        // Si ya está en caché, saltar
-        if (productionDataCache.has(key)) continue;
-
-        try {
-            const megaData = await fetchProductionDeduped(lineId, fecha);
-            if (megaData && !productionDataCache.has(key)) {
-                productionDataCache.set(key, {
-                    megaData,
-                    shiftsStatus: [],
-                    timestamp: Date.now()
-                });
-            }
-        } catch {
-            // Silencioso en segundo plano
-        }
-    }
-};
-
-/**
- * Pre-carga únicamente la línea inicial (electronics) durante la pantalla de Login,
- * reutilizando la promesa en vuelo si el usuario inicia sesión antes de que termine.
- */
-export const preloadProductionOnLogin = async (fecha = getFormattedDate(), primaryLineId = LINES_CONFIG.electronics?.id || 'electronics') => {
-    const primaryKey = `${primaryLineId}_${fecha}`;
-
-    try {
-        productionService.getLinesConfig(primaryLineId).catch(() => {});
-
-        if (!productionDataCache.has(primaryKey)) {
-            const [megaData, shiftsStatus] = await Promise.all([
-                fetchProductionDeduped(primaryLineId, fecha),
-                fetchShiftStatusDeduped(primaryLineId, fecha).catch(() => [])
-            ]);
-
-            if (megaData) {
-                productionDataCache.set(primaryKey, {
-                    megaData,
-                    shiftsStatus: shiftsStatus || [],
-                    timestamp: Date.now()
-                });
-                if (shiftsStatus && shiftsStatus.length > 0) {
-                    shiftStatusLoadedKeys.add(primaryKey);
-                }
-            }
-        }
-    } catch {
-        // Silencioso: si falla durante el login, TablaGeneric reintentará normalmente al entrar
-    }
-};
-
 export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions) => {
     const cacheKey = `${linea}_${fecha}`;
 
@@ -166,6 +101,12 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
                 ...prev,
                 ...buildStateFromRaw(fecha, turno, cached.megaData, cached.shiftsStatus),
                 loading: false,
+                error: null
+            }));
+        } else {
+            setData(prev => ({
+                ...prev,
+                loading: true,
                 error: null
             }));
         }
@@ -232,9 +173,8 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
         const cached = productionDataCache.get(cacheKey);
         const now = Date.now();
 
-        // Si ya tenemos datos frescos (< 15 s) y no es polling ni forzado, no disparamos petición de red
+        // Si ya tenemos datos frescos (< 20 s) y no es polling ni forzado, no disparamos petición de red
         if (!isPoll && !ignoreTTL && cached?.megaData && (now - cached.timestamp < CACHE_FRESH_TTL_MS)) {
-            prefetchOtherLinesInBackground(linea, fecha);
             return;
         }
 
@@ -244,32 +184,7 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
             setData(prev => ({ ...prev, loading: true }));
         }
 
-        // 1. shift-status en segundo plano SIN bloquear la carga de producción
-        if (forceShiftStatus || !shiftStatusLoadedKeys.has(cacheKey)) {
-            shiftStatusLoadedKeys.add(cacheKey);
-            fetchShiftStatusDeduped(linea, fecha, apiFunctions.getShiftsStatus)
-                .then((shiftsStatus) => {
-                    const currentCached = productionDataCache.get(cacheKey);
-                    if (currentCached) {
-                        productionDataCache.set(cacheKey, {
-                            ...currentCached,
-                            shiftsStatus: shiftsStatus || []
-                        });
-                    }
-                    if (currentRequestId === requestIdRef.current) {
-                        setData(prev => ({
-                            ...prev,
-                            shiftsStatus: shiftsStatus || []
-                        }));
-                    }
-                })
-                .catch((err) => {
-                    shiftStatusLoadedKeys.delete(cacheKey);
-                    console.warn("No se pudo obtener shift-status en segundo plano:", err);
-                });
-        }
-
-        // 2. Esperamos ÚNICAMENTE a getDailyProduction (reutilizando promesa si ya venía en vuelo desde el Login)
+        // 1. Esperamos PRIMERO a getDailyProduction sin competir con llamadas secundarias
         try {
             const megaData = await fetchProductionDeduped(linea, fecha, apiFunctions.getDailyProduction);
 
@@ -290,8 +205,30 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
                 error: null
             }));
 
-            // Lanzar pre-carga silenciosa de las demás líneas una vez cargada la primera
-            prefetchOtherLinesInBackground(linea, fecha);
+            // 2. Cargar shift-status DESPUÉS de haber pintado la producción principal para no competir por red
+            if (forceShiftStatus || !shiftStatusLoadedKeys.has(cacheKey)) {
+                shiftStatusLoadedKeys.add(cacheKey);
+                fetchShiftStatusDeduped(linea, fecha, apiFunctions.getShiftsStatus)
+                    .then((shiftsStatus) => {
+                        const currentCached = productionDataCache.get(cacheKey);
+                        if (currentCached) {
+                            productionDataCache.set(cacheKey, {
+                                ...currentCached,
+                                shiftsStatus: shiftsStatus || []
+                            });
+                        }
+                        if (currentRequestId === requestIdRef.current) {
+                            setData(prev => ({
+                                ...prev,
+                                shiftsStatus: shiftsStatus || []
+                            }));
+                        }
+                    })
+                    .catch((err) => {
+                        shiftStatusLoadedKeys.delete(cacheKey);
+                        console.warn("No se pudo obtener shift-status en segundo plano:", err);
+                    });
+            }
 
             await syncOfflineQueue();
         } catch (error) {
@@ -312,15 +249,12 @@ export const useProductionData = (linea, fecha, turno, metaPorHora, apiFunctions
         }
     }, [apiFunctions, fecha, fetchAll]);
 
-    // Efecto con Debounce (400 ms) al cambiar de línea + Polling cada 30 s en la línea donde te detienes
+    // Efecto con Debounce (100 ms) al cambiar de línea + Polling cada 30 s en la línea donde te detienes
     useEffect(() => {
         if (!turno || turno === '0') return;
 
         const isToday = fecha === getFormattedDate();
         const hasAnyCache = productionDataCache.size > 0;
-
-        // Si es la primera carga absoluta de la app, pedir de inmediato (0 ms);
-        // si está cambiando entre líneas, esperar 400 ms a que el usuario se detenga en la línea deseada.
         const debounceDelay = hasAnyCache ? SWITCH_DEBOUNCE_MS : 0;
 
         const debounceTimer = setTimeout(() => {

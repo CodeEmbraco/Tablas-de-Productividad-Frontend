@@ -12,7 +12,7 @@ import { TablaGenericRouter } from './lines/TablaGeneric';
 import MobileLogin from './pages/Login/MobileLogin';
 
 function App() {
-  const isNative = !Capacitor.isNativePlatform();
+  const isNative = Capacitor.isNativePlatform();
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
@@ -37,14 +37,14 @@ function App() {
               <MobileLogin
                 onLoginSuccess={(user) => {
                   setCurrentUser(user);
-                  navigate("/tabla/electronics", { replace: true });
+                  navigate("/tabla/cdu", { replace: true });
                 }}
               />
             }
           />
           <Route path="/Dashboard" element={<GlobalDashboard />} />
           <Route path="/tabla/:lineId" element={<TablaGenericRouter />} />
-          <Route path="*" element={<Navigate to="/tabla/electronics" replace />} />
+          <Route path="*" element={<Navigate to="/tabla/cdu" replace />} />
         </Routes>
       </ProductionProvider>
     </>

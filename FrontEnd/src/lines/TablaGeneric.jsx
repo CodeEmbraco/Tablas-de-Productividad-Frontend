@@ -53,7 +53,7 @@ import '@styles/global.css';
  */
 const TablaGeneric = ({ lineConfigKey }) => {
 
-    const isNative = !Capacitor.isNativePlatform();
+    const isNative = Capacitor.isNativePlatform();
 
     const { selectedDate, selectedShift, setSelectedDate, setSelectedShift } = useProduction();
 
@@ -64,7 +64,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
 
     // Estado para la configuración dinámica recuperada de la base de datos
     const [dynamicConfig, setDynamicConfig] = useState({
-        name: "",
+        name: lineConfig?.name || "",
         supervisors: [],
         leaders: []
     });
@@ -76,7 +76,7 @@ const TablaGeneric = ({ lineConfigKey }) => {
         const applyLineConfig = (data) => {
             if (data && data.LineId) {
                 setDynamicConfig({
-                    name: data.Nombre || lineConfig.id,
+                    name: data.Nombre || lineConfig.name || lineConfig.id,
                     supervisors: (data.Supervisores || []).map(s => ({
                         id: String(s.PersonalId),
                         name: s.Nombre
@@ -95,6 +95,12 @@ const TablaGeneric = ({ lineConfigKey }) => {
             return;
         }
 
+        // Mostrar de inmediato el nombre local de la línea sin esperar a la red
+        setDynamicConfig(prev => ({
+            ...prev,
+            name: lineConfig.name || lineConfig.id
+        }));
+
         let isActive = true;
         const debounceTimer = setTimeout(async () => {
             try {
@@ -105,13 +111,13 @@ const TablaGeneric = ({ lineConfigKey }) => {
             } catch (err) {
                 console.error("Error al cargar configuración de línea:", err);
             }
-        }, dynamicConfig.name ? 300 : 0);
+        }, isNative ? 1200 : 150);
 
         return () => {
             isActive = false;
             clearTimeout(debounceTimer);
         };
-    }, [lineConfig?.id]);
+    }, [lineConfig?.id, isNative]);
 
     const apiConfig = useMemo(() => ({
         getDailyProduction: (date) => productionService.getDailyProduction(lineConfig.id, date),
