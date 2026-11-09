@@ -24,16 +24,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Create .env file for production build
         run: |
-          cat << 'EOF' > .env
-          VITE_LOCAL_BACKEND_URL=${{ secrets.VITE_LOCAL_BACKEND_URL || 'https://api.embraco.com/remx/receipes/productividad' }}
-          VITE_API_KEY=${{ secrets.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d' }}
-          VITE_ADMIN_USERNAME=${{ secrets.VITE_ADMIN_USERNAME || 'admin' }}
-          VITE_ADMIN_PASSWORD=${{ secrets.VITE_ADMIN_PASSWORD || 'Nidec@2026' }}
-          EOF
+          echo "VITE_LOCAL_BACKEND_URL=${{ secrets.VITE_LOCAL_BACKEND_URL || 'https://api.embraco.com/remx/receipes/productividad' }}" > .env
+          echo "VITE_API_KEY=${{ secrets.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d' }}" >> .env
+          echo "VITE_ADMIN_USERNAME=${{ secrets.VITE_ADMIN_USERNAME || 'admin' }}" >> .env
+          echo "VITE_ADMIN_PASSWORD=${{ secrets.VITE_ADMIN_PASSWORD || 'Nidec@2026' }}" >> .env
 
       - name: Install NPM dependencies
         run: npm install --legacy-peer-deps
