@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "axios": "^1.12.2",
     "chart.js": "^4.5.1",
     "eruda": "^3.4.3",

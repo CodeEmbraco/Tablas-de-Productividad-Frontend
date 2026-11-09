@@ -1,0 +1,78 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - feature/PWA
+
+jobs:
+  build-unsigned-ipa:
+    name: Build Unsigned iOS (.ipa)
+    runs-on: macos-latest
+
+    defaults:
+      run:
+        working-directory: FrontEnd
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create .env file for production build
+        run: |
+          cat << 'EOF' > .env
+          VITE_LOCAL_BACKEND_URL=${{ secrets.VITE_LOCAL_BACKEND_URL || 'https://api.embraco.com/remx/receipes/productividad' }}
+          VITE_API_KEY=${{ secrets.VITE_API_KEY || '3ce62d43fbb5b5b09a16996f62395d' }}
+          VITE_ADMIN_USERNAME=${{ secrets.VITE_ADMIN_USERNAME || 'admin' }}
+          VITE_ADMIN_PASSWORD=${{ secrets.VITE_ADMIN_PASSWORD || 'Nidec@2026' }}
+          EOF
+
+      - name: Install NPM dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build web assets (Vite)
+        run: npm run build
+
+      - name: Sync Capacitor iOS project
+        run: npx cap sync ios
+
+      - name: Resolve Swift Package Manager dependencies
+        working-directory: FrontEnd/ios/App
+        run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+
+      - name: Build Unsigned iOS App (Release - arm64)
+        working-directory: FrontEnd/ios/App
+        run: |
+          xcodebuild clean build \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package App.app into Unsigned .ipa
+        working-directory: FrontEnd/ios/App
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r -q TablasDeProductividad-unsigned.ipa Payload
+
+      - name: Upload Unsigned .ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TablasDeProductividad-unsigned-ipa
+          path: FrontEnd/ios/App/TablasDeProductividad-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
+
