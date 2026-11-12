@@ -11,7 +11,7 @@ on:
 jobs:
   build-and-upload-ipa:
     name: Build, Sign & Upload iOS (.ipa) to App Store Connect
-    runs-on: macos-latest
+    runs-on: macos-15-intel
 
     defaults:
       run:
