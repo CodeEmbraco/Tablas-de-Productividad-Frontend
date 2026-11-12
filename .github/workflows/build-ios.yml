@@ -1,4 +1,4 @@
-name: Build Unsigned iOS IPA
+name: Build & Upload Signed iOS IPA
 
 on:
   workflow_dispatch:
@@ -9,8 +9,8 @@ on:
       - feature/PWA
 
 jobs:
-  build-unsigned-ipa:
-    name: Build Unsigned iOS (.ipa)
+  build-and-upload-ipa:
+    name: Build, Sign & Upload iOS (.ipa) to App Store Connect
     runs-on: macos-latest
 
     defaults:
@@ -42,35 +42,103 @@ jobs:
       - name: Sync Capacitor iOS project
         run: npx cap sync ios
 
+      - name: Install App Store Connect API Key (.p8)
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APPSTORE_KEY_ID" ] || [ -z "$APPSTORE_ISSUER_ID" ] || [ -z "$APPSTORE_PRIVATE_KEY" ]; then
+            echo "❌ Error: Faltan los secrets APPSTORE_KEY_ID, APPSTORE_ISSUER_ID o APPSTORE_PRIVATE_KEY en GitHub."
+            exit 1
+          fi
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
+      - name: Configure Team ID (AWHLUTHF5F), Build Number & Export Compliance
+        working-directory: FrontEnd/ios/App
+        run: |
+          # Incrementar número de compilación automáticamente con el run_number de GitHub Actions
+          sed -i '' "s/CURRENT_PROJECT_VERSION = 1;/CURRENT_PROJECT_VERSION = ${{ github.run_number }};/g" App.xcodeproj/project.pbxproj
+
+          # Inyectar DEVELOPMENT_TEAM = AWHLUTHF5F en las configuraciones del proyecto
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = com.tablas.productividad;/PRODUCT_BUNDLE_IDENTIFIER = com.tablas.productividad; DEVELOPMENT_TEAM = AWHLUTHF5F;/g" App.xcodeproj/project.pbxproj
+
+          # Agregar ITSAppUsesNonExemptEncryption = false a Info.plist para evitar bloqueo en TestFlight
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" App/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" App/Info.plist
+
       - name: Resolve Swift Package Manager dependencies
         working-directory: FrontEnd/ios/App
         run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
 
-      - name: Build Unsigned iOS App (Release - arm64)
+      - name: Build Xcode Archive (.xcarchive)
         working-directory: FrontEnd/ios/App
         run: |
-          xcodebuild clean build \
+          xcodebuild clean archive \
             -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            -archivePath build/App.xcarchive \
+            DEVELOPMENT_TEAM=AWHLUTHF5F \
+            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_IDENTITY="-" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-      - name: Package App.app into Unsigned .ipa
+      - name: Export & Sign IPA using Nidec Cloud Managed Certificate
         working-directory: FrontEnd/ios/App
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
-          mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
-          zip -r -q TablasDeProductividad-unsigned.ipa Payload
+          cat << 'EOF' > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store-connect</string>
+              <key>teamID</key>
+              <string>AWHLUTHF5F</string>
+              <key>signingStyle</key>
+              <string>automatic</string>
+              <key>destination</key>
+              <string>export</string>
+              <key>manageAppVersionAndBuildNumber</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
 
-      - name: Upload Unsigned .ipa Artifact
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8" \
+            -authenticationKeyID "$APPSTORE_KEY_ID" \
+            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID"
+
+      - name: Upload Signed IPA Artifact to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: TablasDeProductividad-unsigned-ipa
-          path: FrontEnd/ios/App/TablasDeProductividad-unsigned.ipa
+          name: TablasDeProductividad-signed-ipa
+          path: FrontEnd/ios/App/build/export/*.ipa
           if-no-files-found: error
           retention-days: 30
 
+      - name: Upload Signed IPA to App Store Connect (TestFlight)
+        working-directory: FrontEnd/ios/App
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          IPA_FILE=$(ls build/export/*.ipa | head -n 1)
+          echo "🚀 Subiendo $IPA_FILE a App Store Connect..."
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_FILE" \
+            --apiKey "$APPSTORE_KEY_ID" \
+            --apiIssuer "$APPSTORE_ISSUER_ID"
