@@ -169,9 +169,15 @@ jobs:
           })();
           NODEEOF
 
-          # 4. Convertir .cer + .key a .p12 e importar al Keychain temporal
+          # 4. Convertir .cer + .key a .p12 (compatible con LibreSSL y OpenSSL 3) e importar al Keychain temporal
           openssl x509 -inform DER -in "$RUNNER_TEMP/dist.cer" -out "$RUNNER_TEMP/dist.pem"
-          openssl pkcs12 -export -legacy \
+          openssl pkcs12 -export \
+            -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1 \
+            -out "$RUNNER_TEMP/dist.p12" \
+            -inkey "$RUNNER_TEMP/dist.key" \
+            -in "$RUNNER_TEMP/dist.pem" \
+            -passout pass:"$KEYCHAIN_PASS" || \
+          openssl pkcs12 -export \
             -out "$RUNNER_TEMP/dist.p12" \
             -inkey "$RUNNER_TEMP/dist.key" \
             -in "$RUNNER_TEMP/dist.pem" \
