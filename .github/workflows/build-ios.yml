@@ -48,25 +48,7 @@ jobs:
           RAW_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           RAW_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
         run: |
-          # 1. Limpiar saltos de línea o espacios accidentales en los secrets
-          CLEAN_KEY_ID=$(printf "%s" "$RAW_KEY_ID" | tr -d '[:space:]')
-          CLEAN_ISSUER_ID=$(printf "%s" "$RAW_ISSUER_ID" | tr -d '[:space:]')
-
-          if [ -z "$CLEAN_KEY_ID" ] || [ -z "$CLEAN_ISSUER_ID" ] || [ -z "$RAW_PRIVATE_KEY" ]; then
-            echo "❌ Error: Faltan los secrets APPSTORE_KEY_ID, APPSTORE_ISSUER_ID o APPSTORE_PRIVATE_KEY."
-            exit 1
-          fi
-
-          echo "CLEAN_KEY_ID=$CLEAN_KEY_ID" >> $GITHUB_ENV
-          echo "CLEAN_ISSUER_ID=$CLEAN_ISSUER_ID" >> $GITHUB_ENV
-
-          mkdir -p ~/.appstoreconnect/private_keys
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${CLEAN_KEY_ID}.p8"
-          printf "%s\n" "$RAW_PRIVATE_KEY" | tr -d '\r' > "$KEY_PATH"
-          chmod 600 "$KEY_PATH"
-          echo "KEY_PATH=$KEY_PATH" >> $GITHUB_ENV
-
-          # 2. Crear Keychain temporal para Xcode codesign
+          # 1. Crear Keychain temporal para Xcode codesign
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           KEYCHAIN_PASS="ci_temp_pass_123"
           security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
@@ -76,72 +58,116 @@ jobs:
           security default-keychain -s "$KEYCHAIN_PATH"
 
           # Instalar certificados intermedios WWDR de Apple (G2 y G3)
-          curl -s -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
-          curl -s -o "$RUNNER_TEMP/AppleWWDRCAG2.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG2.cer
-          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
-          security import "$RUNNER_TEMP/AppleWWDRCAG2.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+          curl -sL -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          curl -sL -o "$RUNNER_TEMP/AppleWWDRCAG2.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG2.cer
+          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
+          security import "$RUNNER_TEMP/AppleWWDRCAG2.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
 
-          # 3. Generar llave privada + CSR y solicitar certificado de distribución vía API de App Store Connect
-          pip3 install --quiet pyjwt cryptography requests
-
+          # 2. Generar llave privada RSA + CSR con OpenSSL
           openssl req -new -newkey rsa:2048 -nodes \
             -keyout "$RUNNER_TEMP/dist.key" \
             -out "$RUNNER_TEMP/dist.csr" \
             -subj "/CN=Nidec CI Distribution/O=Nidec Global Appliance Mexico/C=MX"
 
-          python3 - << 'PYEOF'
-          import os, time, base64, jwt, requests
+          # 3. Normalizar API Key (.p8), validar JWT y crear certificado de distribución usando Node.js 22 nativo
+          node - << 'NODEEOF'
+          const fs = require('fs');
+          const path = require('path');
+          const os = require('os');
+          const crypto = require('crypto');
 
-          key_id = os.environ["CLEAN_KEY_ID"]
-          issuer_id = os.environ["CLEAN_ISSUER_ID"]
-          key_path = os.path.expanduser(f"~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8")
-          runner_temp = os.environ["RUNNER_TEMP"]
+          let keyId = (process.env.RAW_KEY_ID || '').replace(/\s+/g, '');
+          let issuerId = (process.env.RAW_ISSUER_ID || '').replace(/\s+/g, '');
+          let rawKey = (process.env.RAW_PRIVATE_KEY || '').trim();
 
-          with open(key_path, "r") as f:
-              private_key = f.read().strip()
+          if (!keyId || !issuerId || !rawKey) {
+            console.error('❌ Error: Faltan los secrets APPSTORE_KEY_ID, APPSTORE_ISSUER_ID o APPSTORE_PRIVATE_KEY.');
+            process.exit(1);
+          }
 
-          token = jwt.encode(
-              {"iss": issuer_id, "iat": int(time.time()) - 60, "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
-              private_key,
-              algorithm="ES256",
-              headers={"kid": key_id, "typ": "JWT"}
-          )
+          // Detectar si accidentalmente se invirtieron KEY_ID (10 chars) e ISSUER_ID (UUID de 36 chars)
+          if (keyId.includes('-') && !issuerId.includes('-')) {
+            console.log('🔄 Detectado KEY_ID e ISSUER_ID invertidos; corrigiendo orden automáticamente...');
+            const tmp = keyId;
+            keyId = issuerId;
+            issuerId = tmp;
+          }
 
-          headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+          console.log(`ℹ️ Key ID longitud: ${keyId.length} chars | Issuer ID longitud: ${issuerId.length} chars`);
 
-          with open(os.path.join(runner_temp, "dist.csr"), "r") as f:
-              csr_pem = f.read()
-          csr_b64 = "".join([line.strip() for line in csr_pem.splitlines() if not line.startswith("-----")])
+          // Reconstruir formato PEM válido para el archivo .p8
+          const bodyBase64 = rawKey
+            .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+            .replace(/-----END PRIVATE KEY-----/g, '')
+            .replace(/\s+/g, '');
+          const wrappedLines = bodyBase64.match(/.{1,64}/g) || [];
+          const cleanPem = `-----BEGIN PRIVATE KEY-----\n${wrappedLines.join('\n')}\n-----END PRIVATE KEY-----\n`;
 
-          for cert_type in ["DISTRIBUTION", "IOS_DISTRIBUTION"]:
-              resp = requests.post(
-                  "https://api.appstoreconnect.apple.com/v1/certificates",
-                  headers=headers,
-                  json={
-                      "data": {
-                          "type": "certificates",
-                          "attributes": {
-                              "certificateType": cert_type,
-                              "csrContent": csr_b64
-                          }
-                      }
+          const keyDir = path.join(os.homedir(), '.appstoreconnect', 'private_keys');
+          fs.mkdirSync(keyDir, { recursive: true });
+          const keyPath = path.join(keyDir, `AuthKey_${keyId}.p8`);
+          fs.writeFileSync(keyPath, cleanPem, { mode: 0o600 });
+
+          // Exportar variables limpias a GITHUB_ENV
+          fs.appendFileSync(process.env.GITHUB_ENV, `CLEAN_KEY_ID=${keyId}\nCLEAN_ISSUER_ID=${issuerId}\nKEY_PATH=${keyPath}\n`);
+
+          // Crear JWT ES256 para App Store Connect API
+          const base64url = (buf) => Buffer.from(buf).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+          const now = Math.floor(Date.now() / 1000);
+          const header = base64url(JSON.stringify({ alg: 'ES256', kid: keyId, typ: 'JWT' }));
+          const payload = base64url(JSON.stringify({ iss: issuerId, iat: now - 60, exp: now + 900, aud: 'appstoreconnect-v1' }));
+          const signingInput = `${header}.${payload}`;
+          const signature = crypto.sign('sha256', Buffer.from(signingInput), {
+            key: cleanPem,
+            dsaEncoding: 'ieee-p1363'
+          });
+          const token = `${signingInput}.${base64url(signature)}`;
+
+          const csrPem = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'dist.csr'), 'utf8');
+          const csrContent = csrPem
+            .split(/\r?\n/)
+            .filter((l) => !l.startsWith('-----') && l.trim().length > 0)
+            .join('');
+
+          (async () => {
+            const headers = {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            };
+
+            for (const certType of ['DISTRIBUTION', 'IOS_DISTRIBUTION']) {
+              const res = await fetch('https://api.appstoreconnect.apple.com/v1/certificates', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                  data: {
+                    type: 'certificates',
+                    attributes: {
+                      certificateType: certType,
+                      csrContent
+                    }
                   }
-              )
-              if resp.status_code in (200, 201):
-                  data = resp.json()["data"]
-                  cert_id = data["id"]
-                  cert_der = base64.b64decode(data["attributes"]["certificateContent"])
-                  with open(os.path.join(runner_temp, "dist.cer"), "wb") as cf:
-                      cf.write(cert_der)
-                  with open(os.path.join(runner_temp, "ci_cert_id.txt"), "w") as idf:
-                      idf.write(cert_id)
-                  print(f"✅ Certificado temporal creado en Apple ({cert_type}): ID={cert_id}")
-                  break
-              else:
-                  print(f"⚠️ Intento con {cert_type} devolvió {resp.status_code}: {resp.text}")
-          else:
-              raise SystemExit("❌ No se pudo crear el certificado de distribución con la API Key. Verifica permisos de la llave.")
-          PYEOF
+                })
+              });
+
+              const text = await res.text();
+              if (res.ok) {
+                const json = JSON.parse(text);
+                const certId = json.data.id;
+                const certDer = Buffer.from(json.data.attributes.certificateContent, 'base64');
+                fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'dist.cer'), certDer);
+                fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'ci_cert_id.txt'), certId);
+                console.log(`✅ Certificado de distribución creado (${certType}): ID=${certId}`);
+                return;
+              } else {
+                console.log(`⚠️ Intento ${certType} respondió HTTP ${res.status}: ${text}`);
+              }
+            }
+
+            console.error('❌ No se pudo crear un certificado nuevo (posible límite de certificados alcanzado o permisos de API Key).');
+            process.exit(1);
+          })();
+          NODEEOF
 
           # 4. Convertir .cer + .key a .p12 e importar al Keychain temporal
           openssl x509 -inform DER -in "$RUNNER_TEMP/dist.cer" -out "$RUNNER_TEMP/dist.pem"
@@ -236,20 +262,28 @@ jobs:
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/ci_cert_id.txt" ]; then
-            python3 - << 'PYEOF'
-          import os, time, jwt, requests
-          key_id = os.environ["CLEAN_KEY_ID"]
-          issuer_id = os.environ["CLEAN_ISSUER_ID"]
-          key_path = os.environ["KEY_PATH"]
-          with open(os.path.join(os.environ["RUNNER_TEMP"], "ci_cert_id.txt")) as f:
-              cert_id = f.read().strip()
-          with open(key_path) as f:
-              private_key = f.read().strip()
-          token = jwt.encode(
-              {"iss": issuer_id, "iat": int(time.time()) - 60, "exp": int(time.time()) + 600, "aud": "appstoreconnect-v1"},
-              private_key, algorithm="ES256", headers={"kid": key_id, "typ": "JWT"}
-          )
-          r = requests.delete(f"https://api.appstoreconnect.apple.com/v1/certificates/{cert_id}", headers={"Authorization": f"Bearer {token}"})
-          print(f"🧹 Certificado temporal {cert_id} eliminado del portal de Apple (status {r.status_code})")
-          PYEOF
+            node - << 'NODEEOF'
+          const fs = require('fs');
+          const path = require('path');
+          const crypto = require('crypto');
+
+          const keyId = process.env.CLEAN_KEY_ID;
+          const issuerId = process.env.CLEAN_ISSUER_ID;
+          const keyPath = process.env.KEY_PATH;
+          const certId = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'ci_cert_id.txt'), 'utf8').trim();
+          const cleanPem = fs.readFileSync(keyPath, 'utf8');
+
+          const base64url = (buf) => Buffer.from(buf).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+          const now = Math.floor(Date.now() / 1000);
+          const header = base64url(JSON.stringify({ alg: 'ES256', kid: keyId, typ: 'JWT' }));
+          const payload = base64url(JSON.stringify({ iss: issuerId, iat: now - 60, exp: now + 600, aud: 'appstoreconnect-v1' }));
+          const signingInput = `${header}.${payload}`;
+          const signature = crypto.sign('sha256', Buffer.from(signingInput), { key: cleanPem, dsaEncoding: 'ieee-p1363' });
+          const token = `${signingInput}.${base64url(signature)}`;
+
+          fetch(`https://api.appstoreconnect.apple.com/v1/certificates/${certId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          }).then((r) => console.log(`🧹 Certificado temporal ${certId} eliminado (HTTP ${r.status})`));
+          NODEEOF
           fi
