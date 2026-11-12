@@ -197,14 +197,18 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
-      - name: Configure Team ID (AWHLUTHF5F), Build Number & Export Compliance
+      - name: Configure Team ID (AWHLUTHF5F), iPhone-Only Target, Build Number & Export Compliance
         working-directory: FrontEnd/ios/App
         run: |
           sed -i '' "s/CURRENT_PROJECT_VERSION = 1;/CURRENT_PROJECT_VERSION = ${{ github.run_number }};/g" App.xcodeproj/project.pbxproj
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = com.tablas.productividad;/PRODUCT_BUNDLE_IDENTIFIER = com.tablas.productividad; DEVELOPMENT_TEAM = AWHLUTHF5F;/g" App.xcodeproj/project.pbxproj
 
+          # Configurar la app exclusivamente para iPhone (TARGETED_DEVICE_FAMILY = 1) para que no exija capturas ni diseño de iPad
+          sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' App.xcodeproj/project.pbxproj
+
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" App/Info.plist || \
           /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" App/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations~ipad" App/Info.plist || true
 
       - name: Resolve Swift Package Manager dependencies
         working-directory: FrontEnd/ios/App
