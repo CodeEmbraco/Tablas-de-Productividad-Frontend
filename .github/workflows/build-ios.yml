@@ -42,30 +42,125 @@ jobs:
       - name: Sync Capacitor iOS project
         run: npx cap sync ios
 
-      - name: Install App Store Connect API Key (.p8)
+      - name: Prepare API Key & Provision Ephemeral Distribution Certificate
         env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          RAW_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          RAW_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          RAW_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
         run: |
-          if [ -z "$APPSTORE_KEY_ID" ] || [ -z "$APPSTORE_ISSUER_ID" ] || [ -z "$APPSTORE_PRIVATE_KEY" ]; then
-            echo "❌ Error: Faltan los secrets APPSTORE_KEY_ID, APPSTORE_ISSUER_ID o APPSTORE_PRIVATE_KEY en GitHub."
+          # 1. Limpiar saltos de línea o espacios accidentales en los secrets
+          CLEAN_KEY_ID=$(printf "%s" "$RAW_KEY_ID" | tr -d '[:space:]')
+          CLEAN_ISSUER_ID=$(printf "%s" "$RAW_ISSUER_ID" | tr -d '[:space:]')
+
+          if [ -z "$CLEAN_KEY_ID" ] || [ -z "$CLEAN_ISSUER_ID" ] || [ -z "$RAW_PRIVATE_KEY" ]; then
+            echo "❌ Error: Faltan los secrets APPSTORE_KEY_ID, APPSTORE_ISSUER_ID o APPSTORE_PRIVATE_KEY."
             exit 1
           fi
+
+          echo "CLEAN_KEY_ID=$CLEAN_KEY_ID" >> $GITHUB_ENV
+          echo "CLEAN_ISSUER_ID=$CLEAN_ISSUER_ID" >> $GITHUB_ENV
+
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
-          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${CLEAN_KEY_ID}.p8"
+          printf "%s\n" "$RAW_PRIVATE_KEY" | tr -d '\r' > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "KEY_PATH=$KEY_PATH" >> $GITHUB_ENV
+
+          # 2. Crear Keychain temporal para Xcode codesign
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASS="ci_temp_pass_123"
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+
+          # Instalar certificados intermedios WWDR de Apple (G2 y G3)
+          curl -s -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          curl -s -o "$RUNNER_TEMP/AppleWWDRCAG2.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG2.cer
+          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+          security import "$RUNNER_TEMP/AppleWWDRCAG2.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+
+          # 3. Generar llave privada + CSR y solicitar certificado de distribución vía API de App Store Connect
+          pip3 install --quiet pyjwt cryptography requests
+
+          openssl req -new -newkey rsa:2048 -nodes \
+            -keyout "$RUNNER_TEMP/dist.key" \
+            -out "$RUNNER_TEMP/dist.csr" \
+            -subj "/CN=Nidec CI Distribution/O=Nidec Global Appliance Mexico/C=MX"
+
+          python3 - << 'PYEOF'
+          import os, time, base64, jwt, requests
+
+          key_id = os.environ["CLEAN_KEY_ID"]
+          issuer_id = os.environ["CLEAN_ISSUER_ID"]
+          key_path = os.path.expanduser(f"~/.appstoreconnect/private_keys/AuthKey_{key_id}.p8")
+          runner_temp = os.environ["RUNNER_TEMP"]
+
+          with open(key_path, "r") as f:
+              private_key = f.read().strip()
+
+          token = jwt.encode(
+              {"iss": issuer_id, "iat": int(time.time()) - 60, "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
+              private_key,
+              algorithm="ES256",
+              headers={"kid": key_id, "typ": "JWT"}
+          )
+
+          headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+          with open(os.path.join(runner_temp, "dist.csr"), "r") as f:
+              csr_pem = f.read()
+          csr_b64 = "".join([line.strip() for line in csr_pem.splitlines() if not line.startswith("-----")])
+
+          for cert_type in ["DISTRIBUTION", "IOS_DISTRIBUTION"]:
+              resp = requests.post(
+                  "https://api.appstoreconnect.apple.com/v1/certificates",
+                  headers=headers,
+                  json={
+                      "data": {
+                          "type": "certificates",
+                          "attributes": {
+                              "certificateType": cert_type,
+                              "csrContent": csr_b64
+                          }
+                      }
+                  }
+              )
+              if resp.status_code in (200, 201):
+                  data = resp.json()["data"]
+                  cert_id = data["id"]
+                  cert_der = base64.b64decode(data["attributes"]["certificateContent"])
+                  with open(os.path.join(runner_temp, "dist.cer"), "wb") as cf:
+                      cf.write(cert_der)
+                  with open(os.path.join(runner_temp, "ci_cert_id.txt"), "w") as idf:
+                      idf.write(cert_id)
+                  print(f"✅ Certificado temporal creado en Apple ({cert_type}): ID={cert_id}")
+                  break
+              else:
+                  print(f"⚠️ Intento con {cert_type} devolvió {resp.status_code}: {resp.text}")
+          else:
+              raise SystemExit("❌ No se pudo crear el certificado de distribución con la API Key. Verifica permisos de la llave.")
+          PYEOF
+
+          # 4. Convertir .cer + .key a .p12 e importar al Keychain temporal
+          openssl x509 -inform DER -in "$RUNNER_TEMP/dist.cer" -out "$RUNNER_TEMP/dist.pem"
+          openssl pkcs12 -export -legacy \
+            -out "$RUNNER_TEMP/dist.p12" \
+            -inkey "$RUNNER_TEMP/dist.key" \
+            -in "$RUNNER_TEMP/dist.pem" \
+            -passout pass:"$KEYCHAIN_PASS"
+
+          security import "$RUNNER_TEMP/dist.p12" -k "$KEYCHAIN_PATH" -P "$KEYCHAIN_PASS" -T /usr/bin/codesign -T /usr/bin/security -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Configure Team ID (AWHLUTHF5F), Build Number & Export Compliance
         working-directory: FrontEnd/ios/App
         run: |
-          # Incrementar número de compilación automáticamente con el run_number de GitHub Actions
           sed -i '' "s/CURRENT_PROJECT_VERSION = 1;/CURRENT_PROJECT_VERSION = ${{ github.run_number }};/g" App.xcodeproj/project.pbxproj
-
-          # Inyectar DEVELOPMENT_TEAM = AWHLUTHF5F en las configuraciones del proyecto
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = com.tablas.productividad;/PRODUCT_BUNDLE_IDENTIFIER = com.tablas.productividad; DEVELOPMENT_TEAM = AWHLUTHF5F;/g" App.xcodeproj/project.pbxproj
 
-          # Agregar ITSAppUsesNonExemptEncryption = false a Info.plist para evitar bloqueo en TestFlight
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" App/Info.plist || \
           /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" App/Info.plist
 
@@ -87,11 +182,8 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES
 
-      - name: Export & Sign IPA using Nidec Cloud Managed Certificate
+      - name: Export & Sign IPA
         working-directory: FrontEnd/ios/App
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
           cat << 'EOF' > ExportOptions.plist
           <?xml version="1.0" encoding="UTF-8"?>
@@ -117,9 +209,9 @@ jobs:
             -exportPath build/export \
             -exportOptionsPlist ExportOptions.plist \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8" \
-            -authenticationKeyID "$APPSTORE_KEY_ID" \
-            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID"
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$CLEAN_KEY_ID" \
+            -authenticationKeyIssuerID "$CLEAN_ISSUER_ID"
 
       - name: Upload Signed IPA Artifact to GitHub
         uses: actions/upload-artifact@v4
@@ -131,14 +223,33 @@ jobs:
 
       - name: Upload Signed IPA to App Store Connect (TestFlight)
         working-directory: FrontEnd/ios/App
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
           IPA_FILE=$(ls build/export/*.ipa | head -n 1)
           echo "🚀 Subiendo $IPA_FILE a App Store Connect..."
           xcrun altool --upload-app \
             --type ios \
             --file "$IPA_FILE" \
-            --apiKey "$APPSTORE_KEY_ID" \
-            --apiIssuer "$APPSTORE_ISSUER_ID"
+            --apiKey "$CLEAN_KEY_ID" \
+            --apiIssuer "$CLEAN_ISSUER_ID"
+
+      - name: Cleanup Ephemeral CI Certificate in Apple Portal
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/ci_cert_id.txt" ]; then
+            python3 - << 'PYEOF'
+          import os, time, jwt, requests
+          key_id = os.environ["CLEAN_KEY_ID"]
+          issuer_id = os.environ["CLEAN_ISSUER_ID"]
+          key_path = os.environ["KEY_PATH"]
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "ci_cert_id.txt")) as f:
+              cert_id = f.read().strip()
+          with open(key_path) as f:
+              private_key = f.read().strip()
+          token = jwt.encode(
+              {"iss": issuer_id, "iat": int(time.time()) - 60, "exp": int(time.time()) + 600, "aud": "appstoreconnect-v1"},
+              private_key, algorithm="ES256", headers={"kid": key_id, "typ": "JWT"}
+          )
+          r = requests.delete(f"https://api.appstoreconnect.apple.com/v1/certificates/{cert_id}", headers={"Authorization": f"Bearer {token}"})
+          print(f"🧹 Certificado temporal {cert_id} eliminado del portal de Apple (status {r.status_code})")
+          PYEOF
+          fi
